@@ -137,7 +137,7 @@ public class ClientConnection implements Runnable {
             bufferBytes[index] = read;
             index++;
 
-            /* stop reading is DROP_SIZE is reached */
+            /* stop reading if DROP_SIZE is reached */
             if (msgBytes != null && msgBytes.length + index >= DROP_SIZE) {
                 reading = false;
             }

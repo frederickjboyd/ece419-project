@@ -141,8 +141,16 @@ public class KVClient implements IKVClient {
 
     @Override
     public void newConnection(String hostname, int port) throws UnknownHostException, IOException {
-        store = new KVStore(hostname, port);
-        store.connect();
+        try {
+            store = new KVStore(hostname, port);
+            store.connect();
+        } catch (UnknownHostException uhe) {
+            printError("Unknown host!");
+            logger.info("Unknown host!");
+        } catch (IOException e) {
+            printError("Could not establish connection!");
+            logger.warn("Could not establish connection!");
+        }
     }
 
     public void disconnect() {

@@ -16,7 +16,7 @@ public class PersistentStorage implements IPersistentStorage {
     // Initialize logger
     private static Logger logger = Logger.getRootLogger();
     // Synchronized Hash map 
-    private Map<String, String> syncMap;
+    private Map<String, String> referenceMap;
 
     private String directory = "./data";
     // Use properties file for easy storage of maps
@@ -61,7 +61,7 @@ public class PersistentStorage implements IPersistentStorage {
     public PersistentStorage(){
         init();
         Map<String, String> tempMap = new HashMap<String, String>();
-        this.syncMap = Collections.synchronizedMap(tempMap);
+        this.referenceMap = Collections.synchronizedMap(tempMap);
     }
 
     /**
@@ -77,13 +77,13 @@ public class PersistentStorage implements IPersistentStorage {
         try{
             properties.load(new FileInputStream(this.directory + '/' + this.databaseName));
             for (String key : properties.stringPropertyNames()){
-                lookUpTableContent.put(key, properties.get(key).toString());
+                tempMap.put(key, properties.get(key).toString());
             }
         }
         catch (IOException e){
             logger.error("Failed to load existing properties file!", e);
         }
-        this.syncMap = Collections.synchronizedMap(tempMap);
+        this.referenceMap = Collections.synchronizedMap(tempMap);
     }
 
     // // Saving a map
@@ -188,7 +188,7 @@ public class PersistentStorage implements IPersistentStorage {
     // boolean - check if key-val exists in map
     @Override
     public synchronized boolean existsCheck(String key) {
-        if (this.LookUpTable.isEmpty()){
+        if (this.referenceMap.isEmpty()){
             logger.info("Failed exist check; map is currently empty!");
             return false;
         }

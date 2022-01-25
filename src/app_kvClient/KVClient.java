@@ -150,6 +150,9 @@ public class KVClient implements IKVClient {
         } catch (IOException e) {
             printError("Could not establish connection!");
             logger.warn("Could not establish connection!");
+        } catch (Exception e) {
+            printError("Error with KVStore connect!");
+            logger.info("Error with KVStore connect!");
         }
     }
 

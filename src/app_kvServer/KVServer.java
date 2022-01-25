@@ -41,13 +41,13 @@ public class KVServer implements IKVServer, Runnable{
 
         // Check if file directory exists
         File testFile = new File(dataDirectory);
-		if (!testFile.exists()){
+        if (!testFile.exists()){
             this.storage = new PersistentStorage(); 
-		}
+        }
         // if exists, load into persistentStorage
-		else {
+        else {
             this.storage = new PersistentStorage(databaseName);
-		}
+        }
         
         // Start new client thread
         Thread newThread = new Thread(this);
@@ -191,7 +191,7 @@ public class KVServer implements IKVServer, Runnable{
         running = false;
         try {
             for (int i = 0; i < threadList.size(); i++){
-				threadList.get(i).interrupt();	// interrupt and stop all threads
+				threadList.get(i).interrupt();	
 			}
 			serverSocket.close();
         } catch (IOException e) {

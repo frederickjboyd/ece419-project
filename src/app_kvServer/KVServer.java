@@ -87,7 +87,7 @@ public class KVServer implements IKVServer, Runnable{
     @Override
     public boolean inStorage(String key) {
         // need method in persistent storage class
-        return false;
+        return storage.existsCheck(key)
     }
 
     @Override
@@ -98,13 +98,22 @@ public class KVServer implements IKVServer, Runnable{
 
     @Override
     public String getKV(String key) throws Exception {
-        // TODO Auto-generated method stub
-        return "";
+        String value = storage.get(key);
+		if (value == null){
+			logger.error("Key: " + key + " cannot be found on storage!");
+			throw new Exception("Failed to find key in storage!");
+		}
+        else{
+            return value;
+        }
     }
 
     @Override
     public void putKV(String key, String value) throws Exception {
-        // TODO Auto-generated method stub
+		if (!storage.put(key, value)){
+            logger.error("Failed to PUT (" + key + ',' + value + ") into map!");
+			throw new Exception("Failed to put KV pair in storage!");
+		}
     }
 
     @Override
@@ -114,7 +123,7 @@ public class KVServer implements IKVServer, Runnable{
 
     @Override
     public void clearStorage() {
-        // TODO Auto-generated method stub
+        storage.wipeStorage();
     }
 
     @Override
@@ -123,11 +132,19 @@ public class KVServer implements IKVServer, Runnable{
         running = initializeServer();
 
         if (serverSocket != null) {
-            while (isRunning()) {
+            while (running) {
                 try {
                     Socket client = serverSocket.accept();
+                    
+                    // To be replaced
                     ClientConnection connection = new ClientConnection(client);
-                    new Thread(connection).start();
+                    
+                    // Need KV Communication Server here
+                    
+                    newThread = new Thread(connection)
+                    newThread.start()
+                    // Append new thread to global thread list
+                    threadList.add(newThread)
 
                     logger.info("Connected to "
                             + client.getInetAddress().getHostName()
@@ -139,6 +156,23 @@ public class KVServer implements IKVServer, Runnable{
             }
         }
         logger.info("Server stopped.");
+    }
+
+    private boolean initializeServer() {
+        logger.info("Initialize server ...");
+        try {
+            serverSocket = new ServerSocket(port);
+            logger.info("Server listening on port: "
+                    + serverSocket.getLocalPort());
+            return true;
+
+        } catch (IOException e) {
+            logger.error("Error! Cannot open server socket:");
+            if (e instanceof BindException) {
+                logger.error("Port " + port + " is already bound!");
+            }
+            return false;
+        }
     }
 
     @Override

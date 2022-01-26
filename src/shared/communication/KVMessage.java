@@ -13,6 +13,7 @@ public class KVMessage implements IKVMessage {
 
     private static final int MAX_KEY_SIZE_BYTES = 20;
     private static final int MAX_VALUE_SIZE_BYTES = 1024 * 120;
+    private static final char SEP = 0x1F; // Unit separator
 
     private byte[] msgBytes;
     private StatusType statusType;
@@ -42,7 +43,7 @@ public class KVMessage implements IKVMessage {
         }
 
         // Extract message type, key, value information
-        splitAndSetMessageInfo(rawString);
+        splitAndSetMessageInfo(rawString, String.valueOf(SEP));
 
         logger.debug("statusType: " + this.statusType);
         logger.debug("key: " + this.key);
@@ -64,7 +65,7 @@ public class KVMessage implements IKVMessage {
         String errorMsg;
 
         try {
-            splitAndSetMessageInfo(rawInputString);
+            splitAndSetMessageInfo(rawInputString, "[ ]+");
         } catch (Exception e) {
             errorMsg = "Unable to extract message information.";
             logger.error(errorMsg);
@@ -78,7 +79,8 @@ public class KVMessage implements IKVMessage {
         isMessageLengthValid(this.key, this.value);
 
         try {
-            this.msgBytes = rawInputString.getBytes(StandardCharsets.US_ASCII);
+            String formattedString = this.statusType.toString() + SEP + key + SEP + value;
+            this.msgBytes = formattedString.getBytes(StandardCharsets.US_ASCII);
         } catch (Exception e) {
             errorMsg = "Unable to convert string to byte array.";
             logger.error(errorMsg);
@@ -102,7 +104,7 @@ public class KVMessage implements IKVMessage {
         isMessageLengthValid(key, value);
 
         try {
-            String msgStr = statusType.toString() + " " + key + " " + value;
+            String msgStr = statusType.toString() + SEP + key + SEP + value;
             this.msgBytes = msgStr.getBytes(StandardCharsets.US_ASCII);
         } catch (Exception e) {
             String errorMsg = "Unable to convert input parameters to byte array.";
@@ -126,11 +128,12 @@ public class KVMessage implements IKVMessage {
      * Then, assign them to associated class members.
      * 
      * @param rawMessage Message in string format.
+     * @param separator  Where to split string.
      */
-    private void splitAndSetMessageInfo(String rawMessage) {
+    private void splitAndSetMessageInfo(String rawMessage, String separator) {
         logger.debug("splitAndSetMessageInfo enter");
 
-        String[] rawStringArr = rawMessage.split("[ ]+", 3);
+        String[] rawStringArr = rawMessage.split(separator, 3);
         // statusType needs to match enum value (case sensitive)
         this.statusType = StatusType.valueOf(rawStringArr[0].toUpperCase());
         this.key = rawStringArr[1];
@@ -174,7 +177,14 @@ public class KVMessage implements IKVMessage {
     }
 
     /**
-     * @return the key that is associated with this message,
+     * @return The byte array associated with this message.
+     */
+    public byte[] getMsgBytes() {
+        return this.msgBytes;
+    }
+
+    /**
+     * @return The key that is associated with this message,
      *         null if not key is associated.
      */
     public String getKey() {
@@ -182,7 +192,7 @@ public class KVMessage implements IKVMessage {
     }
 
     /**
-     * @return the value that is associated with this message,
+     * @return The value that is associated with this message,
      *         null if not value is associated.
      */
     public String getValue() {
@@ -190,8 +200,8 @@ public class KVMessage implements IKVMessage {
     }
 
     /**
-     * @return a status string that is used to identify request types,
-     *         response types and error types associated to the message.
+     * @return A status string that is used to identify request types,
+     *         response types, and error types associated to the message.
      */
     public StatusType getStatus() {
         return this.statusType;

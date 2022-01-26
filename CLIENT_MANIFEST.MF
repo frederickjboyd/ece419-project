@@ -1,0 +1,7 @@
+Manifest-Version: 1.0
+Ant-Version: Apache Ant 1.10.5
+Created-By: 11.0.13+8-post-Debian-1deb10u1 (Debian)
+built-by: hongkai2
+Main-Class: app_kvClient.KVClient
+Class-Path: ${project.classpath}
+

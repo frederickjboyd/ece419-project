@@ -61,17 +61,29 @@ public class KVMessage implements IKVMessage {
      */
     public KVMessage(String rawInputString) throws Exception {
         logger.debug("KVMessage(String) enter");
+        String errorMsg;
 
         try {
             splitAndSetMessageInfo(rawInputString);
         } catch (Exception e) {
-            String errorMsg = "Unable to extract message information.";
+            errorMsg = "Unable to extract message information.";
             logger.error(errorMsg);
             throw new Exception(errorMsg);
         }
 
+        logger.debug("statusType: " + this.statusType);
+        logger.debug("key: " + this.key);
+        logger.debug("value: " + this.value);
+
         isMessageLengthValid(this.key, this.value);
-        this.msgBytes = rawInputString.getBytes(StandardCharsets.US_ASCII);
+
+        try {
+            this.msgBytes = rawInputString.getBytes(StandardCharsets.US_ASCII);
+        } catch (Exception e) {
+            errorMsg = "Unable to convert string to byte array.";
+            logger.error(errorMsg);
+            throw new Exception(errorMsg);
+        }
 
         logger.debug("KVMessage(String) exit");
     }
@@ -89,8 +101,14 @@ public class KVMessage implements IKVMessage {
 
         isMessageLengthValid(key, value);
 
-        String msgStr = statusType.toString() + " " + key + " " + value;
-        this.msgBytes = msgStr.getBytes(StandardCharsets.US_ASCII);
+        try {
+            String msgStr = statusType.toString() + " " + key + " " + value;
+            this.msgBytes = msgStr.getBytes(StandardCharsets.US_ASCII);
+        } catch (Exception e) {
+            String errorMsg = "Unable to convert input parameters to byte array.";
+            logger.error(errorMsg);
+            throw new Exception(errorMsg);
+        }
 
         this.statusType = statusType;
         this.key = key;
@@ -113,7 +131,8 @@ public class KVMessage implements IKVMessage {
         logger.debug("splitAndSetMessageInfo enter");
 
         String[] rawStringArr = rawMessage.split("[ ]+", 3);
-        this.statusType = StatusType.valueOf(rawStringArr[0]);
+        // statusType needs to match enum value (case sensitive)
+        this.statusType = StatusType.valueOf(rawStringArr[0].toUpperCase());
         this.key = rawStringArr[1];
         this.value = rawStringArr[2];
 

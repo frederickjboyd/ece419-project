@@ -12,9 +12,9 @@ import org.apache.log4j.Logger;
 
 import app_kvClient.ClientSocketListener;
 
-import shared.messages.KVMessage;
+import shared.communication.KVMessage;
 
-public class KVStore implements KVCommInterface {
+public class KVStore {
     /**
      * Initialize KVStore with address and port of KVServer
      * 
@@ -27,13 +27,6 @@ public class KVStore implements KVCommInterface {
     private boolean running;
 
     private Socket clientSocket;
-    private OutputStream out;
-    private InputStream in;
-
-    private static final int BUFFER_SIZE = 1024;
-    private static final int DROP_SIZE = 1024 * BUFFER_SIZE;
-    private static final int MAX_KEY_SIZE_BYTES = 20;
-    private static final int MAX_STRING_SIZE_BYTES = 1024 * 120;
 
     private String address;
     private int port;
@@ -41,23 +34,23 @@ public class KVStore implements KVCommInterface {
     public KVStore(String address, int port) {
     }
 
-    @Override
+    // @Override
     public void connect() throws Exception {
         // TODO Auto-generated method stub
     }
 
-    @Override
+    // @Override
     public void disconnect() {
         // TODO Auto-generated method stub
     }
 
-    @Override
+    // @Override
     public KVMessage put(String key, String value) throws Exception {
         // TODO Auto-generated method stub
         return null;
     }
 
-    @Override
+    // @Override
     public KVMessage get(String key) throws Exception {
         // TODO Auto-generated method stub
         return null;

@@ -9,7 +9,6 @@ import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 import logger.LogSetup;
 
-import client.KVCommInterface;
 import client.KVStore;
 
 public class KVClient implements IKVClient {
@@ -164,7 +163,7 @@ public class KVClient implements IKVClient {
     }
 
     @Override
-    public KVCommInterface getStore() {
+    public KVStore getStore() {
         return store;
     }
 

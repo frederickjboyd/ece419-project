@@ -3,7 +3,7 @@ package app_kvClient;
 import java.io.IOException;
 import java.net.UnknownHostException;
 
-import client.KVCommInterface;
+import client.KVStore;
 
 public interface IKVClient {
     /**
@@ -17,7 +17,7 @@ public interface IKVClient {
     /**
      * Get the current instance of the Store object
      * 
-     * @return instance of KVCommInterface
+     * @return instance of KVStore
      */
-    public KVCommInterface getStore();
+    public KVStore getStore();
 }

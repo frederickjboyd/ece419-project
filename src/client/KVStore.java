@@ -34,7 +34,12 @@ public class KVStore {
     public KVStore(String address, int port) {
     }
 
-    // @Override
+    public boolean isRunning() {
+        // return (kvCommunication != null) && kvCommunication.isOpen();
+        return true;
+    }
+
+    @Override
     public void connect() throws Exception {
         // TODO Auto-generated method stub
     }

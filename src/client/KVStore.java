@@ -11,10 +11,12 @@ import java.util.Set;
 import org.apache.log4j.Logger;
 
 import app_kvClient.ClientSocketListener;
+import shared.communication.IKVMessage;
+import shared.communication.KVCommunicationClient;
+import shared.communication.KVMessage;
+import shared.communication.IKVMessage.StatusType;
 
-import shared.messages.KVMessage;
-
-public class KVStore implements KVCommInterface {
+public class KVStore {
     /**
      * Initialize KVStore with address and port of KVServer
      * 
@@ -27,43 +29,57 @@ public class KVStore implements KVCommInterface {
     private boolean running;
 
     private Socket clientSocket;
-    private OutputStream out;
-    private InputStream in;
-
-    private static final int BUFFER_SIZE = 1024;
-    private static final int DROP_SIZE = 1024 * BUFFER_SIZE;
-    private static final int MAX_KEY_SIZE_BYTES = 20;
-    private static final int MAX_STRING_SIZE_BYTES = 1024 * 120;
+    private KVCommunicationClient kvCommunication;
 
     private String address;
     private int port;
 
     public KVStore(String address, int port) {
+        this.address = address;
+        this.port = port;
     }
 
-    @Override
     public void connect() throws Exception {
-        // TODO Auto-generated method stub
+        try {
+            clientSocket = new Socket(this.address, this.port);
+            kvCommunication = new KVCommunicationClient(clientSocket);
+            // System.out.println("Connection is established! Server address = "+
+            // serverAddress +", port = "+serverPort);
+            // logger.info("Connection is established! Server address = "+ serverAddress +",
+            // port = "+serverPort);
+        } catch (Exception e) {
+            e.getMessage();
+        }
     }
 
-    @Override
     public void disconnect() {
-        // TODO Auto-generated method stub
+        if (isRunning()) {
+            try {
+                KVMessage kvmessage = new KVMessage(StatusType.DISCONNECT, "", "");
+                kvCommunication.sendMessage(kvmessage);
+                kvCommunication.receiveMessage();
+                kvCommunication.disconnect();
+                logger.debug("Disconnected from server.");
+            } catch (Exception e) {
+                System.out.println("Error! Close Socket Failed!");
+                logger.error("Close Socket Failed!", e);
+            }
+        }
     }
 
-    @Override
-    public KVMessage put(String key, String value) throws Exception {
-        // TODO Auto-generated method stub
-        return null;
-    }
-
-    @Override
     public KVMessage get(String key) throws Exception {
-        // TODO Auto-generated method stub
-        return null;
+        KVMessage kvmessage = new KVMessage(StatusType.GET, key, "");
+        kvCommunication.sendMessage(kvmessage);
+        return kvCommunication.receiveMessage();
+    }
+
+    public KVMessage put(String key, String value) throws Exception {
+        KVMessage kvmessage = new KVMessage(KVMessage.StatusType.PUT, key, value);
+        kvCommunication.sendMessage(kvmessage);
+        return kvCommunication.receiveMessage();
     }
 
     public boolean isRunning() {
-        return running;
+        return (kvCommunication != null) && (kvCommunication.getIsOpen());
     }
 }

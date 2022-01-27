@@ -25,7 +25,7 @@ public class KVCommunicationClient {
         logger.debug("KVCommunicationClient enter");
 
         this.socket = socket;
-        this.isOpen = true;
+        setIsOpen(true);
 
         try {
             this.in = socket.getInputStream();
@@ -45,7 +45,7 @@ public class KVCommunicationClient {
         logger.debug(String.format("SEND\nkey: %s\nvalue: %s", msg.getKey(), msg.getValue()));
     }
 
-    private KVMessage receiveMessage() throws IOException {
+    public KVMessage receiveMessage() throws IOException {
         logger.debug("receiveMessage enter");
 
         int idx = 0;
@@ -112,7 +112,7 @@ public class KVCommunicationClient {
      * Disconnect from the currently connected server.
      */
     public void disconnect() {
-        isOpen = false;
+        setIsOpen(false);
 
         try {
             logger.info("Closing " + socket.getInetAddress().getHostAddress() + ":" + socket.getPort());
@@ -131,5 +131,13 @@ public class KVCommunicationClient {
         } catch (Exception e) {
             logger.error(e.getMessage());
         }
+    }
+
+    public boolean getIsOpen() {
+        return this.isOpen;
+    }
+
+    public void setIsOpen(boolean newValue) {
+        this.isOpen = newValue;
     }
 }

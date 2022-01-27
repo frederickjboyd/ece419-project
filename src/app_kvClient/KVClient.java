@@ -262,7 +262,7 @@ public class KVClient implements IKVClient {
 		kvStore.disconnect();
 		logger.info("connection closed!");
 	}
-	
+}
   public static void main(String[] args) {
         try {
             new LogSetup("logs/client.log", Level.OFF);

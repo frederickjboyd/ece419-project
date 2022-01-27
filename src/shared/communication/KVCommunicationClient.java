@@ -39,10 +39,14 @@ public class KVCommunicationClient {
     }
 
     public void sendMessage(KVMessage msg) throws IOException {
+        logger.debug("sendMessage enter");
+
         byte[] msgBytes = msg.getMsgBytes();
         out.write(msgBytes);
         out.flush();
         logger.debug(String.format("SEND\nkey: %s\nvalue: %s", msg.getKey(), msg.getValue()));
+
+        logger.debug("sendMessage exit");
     }
 
     public KVMessage receiveMessage() throws IOException {
@@ -56,8 +60,10 @@ public class KVCommunicationClient {
         // Read first char from stream
         byte read = (byte) in.read();
         boolean reading = true;
+        int separatorAccum = 0;
 
-        while (read != 0xA && read != -1 && reading) {
+        while (reading && separatorAccum != 3) {
+            System.out.println("idx " + idx + ": " + read);
             if (idx == BUFFER_SIZE) {
                 if (msgBytes == null) {
                     tmp = new byte[BUFFER_SIZE];
@@ -80,8 +86,15 @@ public class KVCommunicationClient {
                 reading = false;
             }
 
+            System.out.println("About to read next byte");
             read = (byte) in.read();
+            if (read == KVMessage.SEP) {
+                separatorAccum++;
+            }
+            System.out.println("byte at EOL: " + read);
         }
+
+        System.out.println("out of while loop");
 
         if (msgBytes == null) {
             tmp = new byte[idx];

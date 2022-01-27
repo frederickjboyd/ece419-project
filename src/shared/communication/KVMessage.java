@@ -12,7 +12,7 @@ public class KVMessage implements IKVMessage {
 
     private static final int MAX_KEY_SIZE_BYTES = 20;
     private static final int MAX_VALUE_SIZE_BYTES = 1024 * 120;
-    private static final char SEP = 0x1F; // Unit separator
+    public static final char SEP = 0x1F; // Unit separator
 
     private byte[] msgBytes;
     private StatusType statusType;
@@ -78,7 +78,7 @@ public class KVMessage implements IKVMessage {
         isMessageLengthValid(this.key, this.value);
 
         try {
-            String formattedString = this.statusType.toString() + SEP + key + SEP + value;
+            String formattedString = this.statusType.toString() + SEP + key + SEP + value + SEP;
             this.msgBytes = formattedString.getBytes(StandardCharsets.US_ASCII);
         } catch (Exception e) {
             errorMsg = "Unable to convert string to byte array.";
@@ -103,7 +103,7 @@ public class KVMessage implements IKVMessage {
         isMessageLengthValid(key, value);
 
         try {
-            String msgStr = statusType.toString() + SEP + key + SEP + value;
+            String msgStr = statusType.toString() + SEP + key + SEP + value + SEP;
             this.msgBytes = msgStr.getBytes(StandardCharsets.US_ASCII);
         } catch (Exception e) {
             String errorMsg = "Unable to convert input parameters to byte array.";
@@ -132,7 +132,7 @@ public class KVMessage implements IKVMessage {
     private void splitAndSetMessageInfo(String rawMessage, String separator) {
         logger.debug("splitAndSetMessageInfo enter");
 
-        String[] rawStringArr = rawMessage.split(separator, 3);
+        String[] rawStringArr = rawMessage.split(separator, 4);
         // statusType needs to match enum value (case sensitive)
         this.statusType = StatusType.valueOf(rawStringArr[0].toUpperCase());
         this.key = rawStringArr[1];

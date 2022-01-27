@@ -1,3 +1,5 @@
+package shared.communication;
+
 import java.io.IOException;
 import java.net.Socket;
 import java.security.InvalidParameterException;
@@ -31,7 +33,9 @@ public class KVCommunicationServer extends KVCommunicationClient implements Runn
         switch (msg.getStatus()) {
             case GET:
                 try {
-                    // TODO: fetch value from server
+                    returnMsgValue = server.getKV(returnMsgKey);
+                    returnMsgType = StatusType.GET_SUCCESS;
+                    logger.info(String.format("%s: %s, %s", returnMsgType.toString(), returnMsgKey, returnMsgValue));
                 } catch (Exception e) {
                     returnMsgType = StatusType.GET_ERROR;
                     logger.info(String.format("%s: %s", returnMsgType.toString(),
@@ -42,7 +46,7 @@ public class KVCommunicationServer extends KVCommunicationClient implements Runn
             case PUT:
                 if (msg.getValue() == "") { // Delete
                     try {
-                        // TODO: delete value from server
+                        // TODO: add code here
                     } catch (Exception e) {
                         returnMsgType = StatusType.DELETE_ERROR;
                         logger.info(
@@ -51,14 +55,15 @@ public class KVCommunicationServer extends KVCommunicationClient implements Runn
                 } else { // Put
                     // Check if there is an existing key
                     try {
-                        // TODO: check server for existing key
+                        server.getKV(returnMsgKey);
                     } catch (Exception e) {
                         returnMsgType = StatusType.PUT; // New key-value pair
                     }
 
                     // Store/Update key-value pair
                     try {
-                        // TODO: add key-value to server
+                        server.putKV(msg.getKey(), msg.getValue());
+                        returnMsgType = StatusType.PUT_SUCCESS;
                         returnMsgValue = msg.getValue();
                     } catch (Exception e) {
                         returnMsgType = StatusType.PUT_ERROR;

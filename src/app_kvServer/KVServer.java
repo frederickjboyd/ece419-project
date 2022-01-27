@@ -1,24 +1,38 @@
 package app_kvServer;
 
+import java.io.File;
+import java.io.IOException;
+import java.net.BindException;
+import java.net.InetAddress;
+import java.net.ServerSocket;
+import java.net.Socket;
+import java.net.UnknownHostException;
+import java.util.ArrayList;
+
+import org.apache.log4j.Level;
+import org.apache.log4j.Logger;
+
 import logger.LogSetup;
+import shared.communication.KVCommunicationServer;
 import persistent_storage.PersistentStorage;
 
 // Runnable for threading
-public class KVServer implements IKVServer, Runnable{
+public class KVServer implements IKVServer, Runnable {
 
-	private static Logger logger = Logger.getRootLogger();
+    private static Logger logger = Logger.getRootLogger();
 
-	private int port;
-	private int cacheSize;
-	private String strategy;
+    private int port;
+    private int cacheSize;
+    private String strategy;
     private ServerSocket serverSocket;
     private boolean running;
 
     private PersistentStorage storage;
     private ArrayList<Thread> threadList;
+    private Thread newThread;
 
     public static String dataDirectory = "./data";
-    public static String databaseName = "database.properties"
+    public static String databaseName = "database.properties";
 
     /**
      * Start KV Server at given port
@@ -41,19 +55,18 @@ public class KVServer implements IKVServer, Runnable{
 
         // Check if file directory exists
         File testFile = new File(dataDirectory);
-        if (!testFile.exists()){
-            this.storage = new PersistentStorage(); 
+        if (!testFile.exists()) {
+            this.storage = new PersistentStorage();
         }
         // if exists, load into persistentStorage
         else {
             this.storage = new PersistentStorage(databaseName);
         }
-        
+
         // Start new client thread
-        Thread newThread = new Thread(this);
+        newThread = new Thread(this);
         newThread.start();
     }
-
 
     @Override
     public int getPort() {
@@ -63,13 +76,12 @@ public class KVServer implements IKVServer, Runnable{
     @Override
     public String getHostname() {
         String hostname = "";
-		try {
-			hostname = InetAddress.getLocalHost().getHostName();
-		}
-		catch (UnknownHostException e) {
-			logger.error("The IP address of server host cannot be resolved. \n", e);
-		}
-		return hostname;
+        try {
+            hostname = InetAddress.getLocalHost().getHostName();
+        } catch (UnknownHostException e) {
+            logger.error("The IP address of server host cannot be resolved. \n", e);
+        }
+        return hostname;
     }
 
     @Override
@@ -87,7 +99,7 @@ public class KVServer implements IKVServer, Runnable{
     @Override
     public boolean inStorage(String key) {
         // need method in persistent storage class
-        return storage.existsCheck(key)
+        return storage.existsCheck(key);
     }
 
     @Override
@@ -99,21 +111,20 @@ public class KVServer implements IKVServer, Runnable{
     @Override
     public String getKV(String key) throws Exception {
         String value = storage.get(key);
-		if (value == null){
-			logger.error("Key: " + key + " cannot be found on storage!");
-			throw new Exception("Failed to find key in storage!");
-		}
-        else{
+        if (value == null) {
+            logger.error("Key: " + key + " cannot be found on storage!");
+            throw new Exception("Failed to find key in storage!");
+        } else {
             return value;
         }
     }
 
     @Override
     public void putKV(String key, String value) throws Exception {
-		if (!storage.put(key, value)){
+        if (!storage.put(key, value)) {
             logger.error("Failed to PUT (" + key + ',' + value + ") into map!");
-			throw new Exception("Failed to put KV pair in storage!");
-		}
+            throw new Exception("Failed to put KV pair in storage!");
+        }
     }
 
     @Override
@@ -128,23 +139,21 @@ public class KVServer implements IKVServer, Runnable{
 
     @Override
     public void run() {
-        
+
         running = initializeServer();
 
         if (serverSocket != null) {
             while (running) {
                 try {
                     Socket client = serverSocket.accept();
-                    
+
                     // To be replaced
-                    ClientConnection connection = new ClientConnection(client);
-                    
-                    // Need KV Communication Server here
-                    
-                    newThread = new Thread(connection)
-                    newThread.start()
+                    KVCommunicationServer connection = new KVCommunicationServer(client, this);
+
+                    newThread = new Thread(connection);
+                    newThread.start();
                     // Append new thread to global thread list
-                    threadList.add(newThread)
+                    threadList.add(newThread);
 
                     logger.info("Connected to "
                             + client.getInetAddress().getHostName()
@@ -190,23 +199,22 @@ public class KVServer implements IKVServer, Runnable{
     public void close() {
         running = false;
         try {
-            for (int i = 0; i < threadList.size(); i++){
-				threadList.get(i).interrupt();	
-			}
-			serverSocket.close();
+            for (int i = 0; i < threadList.size(); i++) {
+                threadList.get(i).interrupt();
+            }
+            serverSocket.close();
         } catch (IOException e) {
             logger.error("Error! " +
                     "Unable to close socket on port: " + port, e);
         }
     }
 
-
     /**
      * Main entry point for the echo server application.
      * 
-     * @param args contains the port number at args[0], 
-     * cacheSize at args[1],
-     * strategy at args[2]
+     * @param args contains the port number at args[0],
+     *             cacheSize at args[1],
+     *             strategy at args[2]
      */
     public static void main(String[] args) {
         try {
@@ -230,7 +238,5 @@ public class KVServer implements IKVServer, Runnable{
             System.exit(1);
         }
     }
-
-
 
 }

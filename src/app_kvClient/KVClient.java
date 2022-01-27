@@ -1,7 +1,17 @@
 package app_kvClient;
 
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStreamReader;
+import java.net.UnknownHostException;
+
+import org.apache.log4j.Level;
+import org.apache.log4j.Logger;
+import logger.LogSetup;
+
 import client.KVCommInterface;
 import client.KVStore;
+
 import logger.LogSetup;
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
@@ -253,6 +263,15 @@ public class KVClient implements IKVClient {
 		logger.info("connection closed!");
 	}
 	
-
+  public static void main(String[] args) {
+        try {
+            new LogSetup("logs/client.log", Level.OFF);
+            KVClient store = new KVClient();
+            store.run();
+        } catch (IOException e) {
+            System.out.println("Error! Unable to initialize logger!");
+            e.printStackTrace();
+            System.exit(1);
+        }
 
 }

@@ -23,3 +23,8 @@
 hs_err_pid*
 
 *.swp
+*.MF
+.vscode
+
+# Exclude dependencies needed to build
+!libs/*.jar

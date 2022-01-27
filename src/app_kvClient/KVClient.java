@@ -2,7 +2,9 @@ package app_kvClient;
 
 import client.KVCommInterface;
 import client.KVStore;
+import logger.LogSetup;
 import java.io.BufferedReader;
+import java.io.InputStreamReader;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -42,7 +44,7 @@ public class KVClient implements IKVClient {
         try{
             kvStore = new KVStore(hostname, port);
             kvStore.connect();
-            setRunning(true);
+            // stop=true;
             logger.info("client end: New connection established");
         }catch (IOException ioe) {
 			logger.error("Client end： to establish new connection!");
@@ -80,7 +82,7 @@ public class KVClient implements IKVClient {
 
         if (tokens[0].equals("quit")) {
             stop = true;
-            kvstore.disconnect();
+            kvStore.disconnect();
             System.out.println(PROMPT + "Application exit!");
 
         } else if (tokens[0].equals("connect")) {
@@ -103,9 +105,28 @@ public class KVClient implements IKVClient {
                 printError("Invalid number of parameters!");
             }
 
-        } else if (tokens[0].equals("send")) {
+        } else if (tokens[0].equals("put")) {
             if (tokens.length >= 2) {
-                if (client != null && client.isRunning()) {
+                if (kvStore!= null && kvStore.isRunning()) {
+                    StringBuilder msg = new StringBuilder();
+                    for (int i = 2; i < tokens.length; i++) {
+                        msg.append(tokens[i]);
+                        if (i != tokens.length - 1) {
+                            msg.append(" ");
+                        }
+                    }
+                    kvStore.put(tokens[1].toString(), msg.toString());
+                    logger.info("PUT: Update Key: " + tokens[1]+ "values:" + msg.toString());
+                } else {
+                    printError("Not connected!");
+                }
+            } else {
+                printError("Error Missing value or key!");
+            }
+
+        } else if (tokens[0].equals("get")) {
+            if (tokens.length >= 1) {
+                if (kvStore!= null && kvStore.isRunning()) {
                     StringBuilder msg = new StringBuilder();
                     for (int i = 1; i < tokens.length; i++) {
                         msg.append(tokens[i]);
@@ -113,16 +134,17 @@ public class KVClient implements IKVClient {
                             msg.append(" ");
                         }
                     }
-                    sendMessage(msg.toString());
+                    kvStore.get(tokens[1].toString(), msg.toString());
+                    logger.info("GET: retrieve Key: " + tokens[1]+ "from server");
                 } else {
                     printError("Not connected!");
                 }
             } else {
-                printError("No message passed!");
+                printError("Error Missing value or key!");
             }
 
         } else if (tokens[0].equals("disconnect")) {
-            kvstore.disconnect();
+            kvStore.disconnect();
 
         } else if (tokens[0].equals("logLevel")) {
             if (tokens.length == 2) {
@@ -224,19 +246,11 @@ public class KVClient implements IKVClient {
 	}
 	
 	private void tearDownConnection() throws IOException {
-		setRunning(false);
+		// setRunning(false);
         stop=true;
 		logger.info("tearing down the connection ...");
-		kvstore.disconnect();
+		kvStore.disconnect();
 		logger.info("connection closed!");
-	}
-	
-	public boolean isRunning() {
-		return running;
-	}
-	
-	public void setRunning(boolean run) {
-		running = run;
 	}
 	
 

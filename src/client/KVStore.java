@@ -13,6 +13,11 @@ public class KVStore implements KVCommInterface {
         // TODO Auto-generated method stub
     }
 
+    public boolean isRunning() {
+		// return (kvCommunication != null) && kvCommunication.isOpen();
+        return true;
+	}
+
     @Override
     public void connect() throws Exception {
         // TODO Auto-generated method stub

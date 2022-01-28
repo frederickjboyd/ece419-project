@@ -27,9 +27,9 @@ public class KVCommunicationServer extends KVCommunicationClient implements Runn
      * @param server Main server instance.
      */
     public KVCommunicationServer(Socket socket, KVServer server) {
+        super(socket);
         DebugHelper.logFuncEnter(logger);
 
-        super(socket);
         this.server = server;
 
         DebugHelper.logFuncExit(logger);

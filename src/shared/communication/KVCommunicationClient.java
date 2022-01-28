@@ -88,7 +88,7 @@ public class KVCommunicationClient {
         logger.trace("Entering while loop");
 
         while (reading && separatorAccum != 3) {
-            logger.trace("idx %d: %d", idx, read);
+            logger.trace(String.format("idx %d: %d", idx, read));
             if (idx == BUFFER_SIZE) {
                 if (msgBytes == null) {
                     tmp = new byte[BUFFER_SIZE];
@@ -118,7 +118,7 @@ public class KVCommunicationClient {
                 separatorAccum++;
             }
 
-            logger.trace("idx %d: %d", idx, read);
+            logger.trace(String.format("idx %d: %d", idx, read));
         }
 
         logger.trace("Exited while loop");

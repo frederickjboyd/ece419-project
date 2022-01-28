@@ -106,6 +106,7 @@ public class KVMessage implements IKVMessage {
 
         try {
             String msgStr = statusType.toString() + SEP + key + SEP + value + SEP;
+            logger.debug(String.format("msgStr: %s", msgStr));
             this.msgBytes = msgStr.getBytes(StandardCharsets.US_ASCII);
         } catch (Exception e) {
             String errorMsg = "Unable to convert input parameters to byte array.";
@@ -153,10 +154,12 @@ public class KVMessage implements IKVMessage {
      */
     private boolean isMessageLengthValid(String key, String value) throws Exception {
         DebugHelper.logFuncEnter(logger);
+        String errorMsg;
 
         int keySizeBytes = key.getBytes(StandardCharsets.US_ASCII).length;
         int valueSizeBytes = value.getBytes(StandardCharsets.US_ASCII).length;
-        String errorMsg;
+        logger.trace(String.format("keySizeBytes: %d", keySizeBytes));
+        logger.trace(String.format("valueSizeBytes: %d", valueSizeBytes));
 
         if (keySizeBytes > MAX_KEY_SIZE_BYTES) {
             errorMsg = String.format("Key length of %s bytes exceeds limit of %s bytes.", keySizeBytes,

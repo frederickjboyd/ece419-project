@@ -47,10 +47,11 @@ public class KVCommunicationServer extends KVCommunicationClient implements Runn
 
         StatusType returnMsgType = null;
         String returnMsgKey = msg.getKey();
-        String returnMsgValue = null;
+        String returnMsgValue = "";
 
         switch (msg.getStatus()) {
             case GET:
+                logger.trace("GET");
                 try {
                     returnMsgValue = server.getKV(returnMsgKey);
                     returnMsgType = StatusType.GET_SUCCESS;
@@ -64,6 +65,7 @@ public class KVCommunicationServer extends KVCommunicationClient implements Runn
 
             case PUT:
                 if (msg.getValue() == "") { // Delete
+                    logger.trace("PUT DELETE");
                     try {
                         // TODO: add code here
                     } catch (Exception e) {
@@ -72,6 +74,7 @@ public class KVCommunicationServer extends KVCommunicationClient implements Runn
                                 String.format("%s: %s", returnMsgType.toString(), returnMsgKey));
                     }
                 } else { // Put
+                    logger.trace("PUT STORE/UPDATE");
                     // Check if there is an existing key
                     try {
                         server.getKV(returnMsgKey);
@@ -93,6 +96,7 @@ public class KVCommunicationServer extends KVCommunicationClient implements Runn
                 break;
 
             case DISCONNECT:
+                logger.trace("DISCONNECT");
                 setIsOpen(false);
                 returnMsgType = StatusType.DISCONNECT;
                 logger.info(String.format("%s", returnMsgType.toString()));

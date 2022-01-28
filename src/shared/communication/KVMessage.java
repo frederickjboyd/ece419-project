@@ -4,6 +4,7 @@ import java.nio.charset.StandardCharsets;
 
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
+import shared.DebugHelper;
 
 import shared.communication.IKVMessage;
 
@@ -26,7 +27,7 @@ public class KVMessage implements IKVMessage {
      * @throws Exception
      */
     public KVMessage(byte[] msgBytes) throws Exception {
-        logger.debug("KVMessage(byte[]) enter");
+        DebugHelper.logFuncEnter(logger);
 
         String rawString;
         this.msgBytes = new byte[msgBytes.length];
@@ -50,7 +51,7 @@ public class KVMessage implements IKVMessage {
 
         isMessageLengthValid(this.key, this.value);
 
-        logger.debug("KVMessage(byte[]) exit");
+        DebugHelper.logFuncExit(logger);
     }
 
     /**
@@ -60,7 +61,8 @@ public class KVMessage implements IKVMessage {
      * @throws Exception
      */
     public KVMessage(String rawInputString) throws Exception {
-        logger.debug("KVMessage(String) enter");
+        DebugHelper.logFuncEnter(logger);
+
         String errorMsg;
 
         try {
@@ -86,7 +88,7 @@ public class KVMessage implements IKVMessage {
             throw new Exception(errorMsg);
         }
 
-        logger.debug("KVMessage(String) exit");
+        DebugHelper.logFuncExit(logger);
     }
 
     /**
@@ -98,7 +100,7 @@ public class KVMessage implements IKVMessage {
      * @throws Exception
      */
     public KVMessage(StatusType statusType, String key, String value) throws Exception {
-        logger.debug("KVMessage(StatusType, String, String) enter");
+        DebugHelper.logFuncEnter(logger);
 
         isMessageLengthValid(key, value);
 
@@ -119,7 +121,7 @@ public class KVMessage implements IKVMessage {
         logger.debug("key: " + this.key);
         logger.debug("value: " + this.value);
 
-        logger.debug("KVMessage(StatusType, String, String) exit");
+        DebugHelper.logFuncExit(logger);
     }
 
     /**
@@ -130,7 +132,7 @@ public class KVMessage implements IKVMessage {
      * @param separator  Where to split string.
      */
     private void splitAndSetMessageInfo(String rawMessage, String separator) {
-        logger.debug("splitAndSetMessageInfo enter");
+        DebugHelper.logFuncEnter(logger);
 
         String[] rawStringArr = rawMessage.split(separator, 4);
         // statusType needs to match enum value (case sensitive)
@@ -138,7 +140,7 @@ public class KVMessage implements IKVMessage {
         this.key = rawStringArr[1];
         this.value = rawStringArr[2];
 
-        logger.debug("splitAndSetMessageInfo exit");
+        DebugHelper.logFuncExit(logger);
     }
 
     /**
@@ -150,7 +152,7 @@ public class KVMessage implements IKVMessage {
      * @throws Exception
      */
     private boolean isMessageLengthValid(String key, String value) throws Exception {
-        logger.debug("isMessageLengthValid enter");
+        DebugHelper.logFuncEnter(logger);
 
         int keySizeBytes = key.getBytes(StandardCharsets.US_ASCII).length;
         int valueSizeBytes = value.getBytes(StandardCharsets.US_ASCII).length;
@@ -170,7 +172,7 @@ public class KVMessage implements IKVMessage {
             throw new Exception(errorMsg);
         }
 
-        logger.debug("isMessageLengthValid exit");
+        DebugHelper.logFuncExit(logger);
 
         return true;
     }

@@ -8,6 +8,7 @@ import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 
 import app_kvServer.KVServer;
+import shared.DebugHelper;
 import shared.communication.KVCommunicationClient;
 import shared.communication.KVMessage;
 import shared.communication.IKVMessage.StatusType;
@@ -18,13 +19,16 @@ public class KVCommunicationServer extends KVCommunicationClient implements Runn
     private KVServer server;
 
     public KVCommunicationServer(Socket socket, KVServer server) {
-        super(socket);
+        DebugHelper.logFuncEnter(logger);
 
+        super(socket);
         this.server = server;
+
+        DebugHelper.logFuncExit(logger);
     }
 
     public KVMessage handleMsg(KVMessage msg) {
-        logger.debug("handleMsg enter");
+        DebugHelper.logFuncEnter(logger);
 
         StatusType returnMsgType = null;
         String returnMsgKey = msg.getKey();
@@ -85,8 +89,6 @@ public class KVCommunicationServer extends KVCommunicationClient implements Runn
                 throw new InvalidParameterException(errorMsg);
         }
 
-        logger.debug("handleMsg exit");
-
         // Build return message
         KVMessage returnMsg = null;
         try {
@@ -95,10 +97,14 @@ public class KVCommunicationServer extends KVCommunicationClient implements Runn
             logger.error(e.getMessage());
         }
 
+        DebugHelper.logFuncExit(logger);
+
         return returnMsg;
     }
 
     public void run() {
+        DebugHelper.logFuncEnter(logger);
+
         while (getIsOpen()) {
             try {
                 KVMessage newMsg = receiveMessage();
@@ -114,5 +120,7 @@ public class KVCommunicationServer extends KVCommunicationClient implements Runn
 
         // Clean up
         disconnect();
+
+        DebugHelper.logFuncExit(logger);
     }
 }

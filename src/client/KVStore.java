@@ -87,7 +87,7 @@ public class KVStore {
     }
 
     public KVMessage put(String key, String value) throws Exception {
-        KVMessage kvmessage = new KVMessage(KVMessage.StatusType.PUT, key, value);
+        KVMessage kvmessage = new KVMessage(StatusType.PUT, key, value);
         kvCommunication.sendMessage(kvmessage);
         return kvCommunication.receiveMessage();
     }

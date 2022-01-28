@@ -13,11 +13,19 @@ import shared.communication.KVCommunicationClient;
 import shared.communication.KVMessage;
 import shared.communication.IKVMessage.StatusType;
 
+/**
+ * Communication class with extra server-specific methods.
+ */
 public class KVCommunicationServer extends KVCommunicationClient implements Runnable {
     private static Logger logger = Logger.getRootLogger();
-
     private KVServer server;
 
+    /**
+     * Constructor for server.
+     * 
+     * @param socket Endpoint for server to communicate with client.
+     * @param server Main server instance.
+     */
     public KVCommunicationServer(Socket socket, KVServer server) {
         DebugHelper.logFuncEnter(logger);
 
@@ -27,6 +35,13 @@ public class KVCommunicationServer extends KVCommunicationClient implements Runn
         DebugHelper.logFuncExit(logger);
     }
 
+    /**
+     * Call appropriate server methods to handle a request.
+     * 
+     * @param msg Message from client
+     * @return Message to return to client, which should indicate whether the
+     *         request was successful or not
+     */
     public KVMessage handleMsg(KVMessage msg) {
         DebugHelper.logFuncEnter(logger);
 
@@ -102,6 +117,9 @@ public class KVCommunicationServer extends KVCommunicationClient implements Runn
         return returnMsg;
     }
 
+    /**
+     * Main loop to receive and handle messages.
+     */
     public void run() {
         DebugHelper.logFuncEnter(logger);
 

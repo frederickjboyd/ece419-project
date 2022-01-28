@@ -21,7 +21,7 @@ public class KVMessage implements IKVMessage {
     private String value;
 
     /**
-     * Constructor using byte array
+     * Constructor using byte array.
      * 
      * @param msgBytes Message in byte array format
      * @throws Exception
@@ -55,7 +55,7 @@ public class KVMessage implements IKVMessage {
     }
 
     /**
-     * Constructor using raw input string from user
+     * Constructor using raw input string from user.
      * 
      * @param rawInputString User's input string into client
      * @throws Exception
@@ -92,7 +92,7 @@ public class KVMessage implements IKVMessage {
     }
 
     /**
-     * Constructor using explicit definitions of message parameters
+     * Constructor using explicit definitions of message parameters.
      * 
      * @param statusType Type of message (e.g. GET, PUT)
      * @param key        Unique key identifying message

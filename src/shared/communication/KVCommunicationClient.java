@@ -11,6 +11,9 @@ import org.apache.log4j.Logger;
 import shared.DebugHelper;
 import shared.communication.KVMessage;
 
+/**
+ * Main class for communication.
+ */
 public class KVCommunicationClient {
     private static Logger logger = Logger.getRootLogger();
 
@@ -22,11 +25,15 @@ public class KVCommunicationClient {
     private static final int BUFFER_SIZE = 1024;
     private static final int DROP_SIZE = 128 * BUFFER_SIZE;
 
+    /**
+     * Constructor for client.
+     * 
+     * @param socket Endpoint for client to communicate with server
+     */
     public KVCommunicationClient(Socket socket) {
         DebugHelper.logFuncEnter(logger);
 
         this.socket = socket;
-        setIsOpen(true);
 
         try {
             this.in = socket.getInputStream();
@@ -36,9 +43,17 @@ public class KVCommunicationClient {
             logger.error(e.getMessage());
         }
 
+        setIsOpen(true);
+
         DebugHelper.logFuncExit(logger);
     }
 
+    /**
+     * Write and flush message to output stream.
+     * 
+     * @param msg
+     * @throws IOException
+     */
     public void sendMessage(KVMessage msg) throws IOException {
         DebugHelper.logFuncEnter(logger);
 
@@ -50,6 +65,13 @@ public class KVCommunicationClient {
         DebugHelper.logFuncExit(logger);
     }
 
+    /**
+     * Receive message from input stream, parse the bytes, and assemble a readable
+     * message.
+     * 
+     * @return Message containing status, key, and value
+     * @throws IOException
+     */
     public KVMessage receiveMessage() throws IOException {
         DebugHelper.logFuncEnter(logger);
 
@@ -121,6 +143,7 @@ public class KVCommunicationClient {
         } catch (Exception e) {
             logger.error(e.getMessage());
         }
+
         logger.debug(String.format("RECEIVE\nkey: %s\nvalue: %s", msg.getKey(), msg.getValue()));
 
         DebugHelper.logFuncExit(logger);
@@ -157,10 +180,20 @@ public class KVCommunicationClient {
         DebugHelper.logFuncExit(logger);
     }
 
+    /**
+     * Get whether an instance is ready to send/receive messages.
+     * 
+     * @return True is ready, false otherwise
+     */
     public boolean getIsOpen() {
         return this.isOpen;
     }
 
+    /**
+     * Set whether an instance should be able to send/receive messages.
+     * 
+     * @param newValue
+     */
     public void setIsOpen(boolean newValue) {
         this.isOpen = newValue;
     }

@@ -47,8 +47,21 @@ public class KVStore {
             // serverAddress +", port = "+serverPort);
             // logger.info("Connection is established! Server address = "+ serverAddress +",
             // port = "+serverPort);
+        } catch (NumberFormatException nfe) {
+            logger.error("Unable to parse argument <port>", nfe);
+            throw new NumberFormatException();
+        } catch (UnknownHostException e) {
+            // logger.error("Unknown Host!", e);
+            throw new UnknownHostException();
+        } catch (IllegalArgumentException e) {
+            // logger.error("Unknown Host!", e);
+            throw new IllegalArgumentException();
+        } catch (IOException e) {
+            logger.error("Could not establish connection!", e);
+            throw new IOException();
         } catch (Exception e) {
-            e.getMessage();
+            logger.error("Other exception", e);
+            throw new Exception();
         }
     }
 
@@ -74,7 +87,7 @@ public class KVStore {
     }
 
     public KVMessage put(String key, String value) throws Exception {
-        KVMessage kvmessage = new KVMessage(KVMessage.StatusType.PUT, key, value);
+        KVMessage kvmessage = new KVMessage(StatusType.PUT, key, value);
         kvCommunication.sendMessage(kvmessage);
         return kvCommunication.receiveMessage();
     }

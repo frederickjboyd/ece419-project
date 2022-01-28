@@ -8,30 +8,50 @@ import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 
 import app_kvServer.KVServer;
+import shared.DebugHelper;
 import shared.communication.KVCommunicationClient;
 import shared.communication.KVMessage;
 import shared.communication.IKVMessage.StatusType;
 
+/**
+ * Communication class with extra server-specific methods.
+ */
 public class KVCommunicationServer extends KVCommunicationClient implements Runnable {
     private static Logger logger = Logger.getRootLogger();
-
     private KVServer server;
 
+    /**
+     * Constructor for server.
+     * 
+     * @param socket Endpoint for server to communicate with client.
+     * @param server Main server instance.
+     */
     public KVCommunicationServer(Socket socket, KVServer server) {
         super(socket);
+        DebugHelper.logFuncEnter(logger);
 
         this.server = server;
+
+        DebugHelper.logFuncExit(logger);
     }
 
+    /**
+     * Call appropriate server methods to handle a request.
+     * 
+     * @param msg Message from client
+     * @return Message to return to client, which should indicate whether the
+     *         request was successful or not
+     */
     public KVMessage handleMsg(KVMessage msg) {
-        logger.debug("handleMsg enter");
+        DebugHelper.logFuncEnter(logger);
 
         StatusType returnMsgType = null;
         String returnMsgKey = msg.getKey();
-        String returnMsgValue = null;
+        String returnMsgValue = "";
 
         switch (msg.getStatus()) {
             case GET:
+                logger.trace("GET");
                 try {
                     returnMsgValue = server.getKV(returnMsgKey);
                     returnMsgType = StatusType.GET_SUCCESS;
@@ -45,6 +65,7 @@ public class KVCommunicationServer extends KVCommunicationClient implements Runn
 
             case PUT:
                 if (msg.getValue() == "") { // Delete
+                    logger.trace("PUT DELETE");
                     try {
                         // TODO: add code here
                     } catch (Exception e) {
@@ -53,6 +74,7 @@ public class KVCommunicationServer extends KVCommunicationClient implements Runn
                                 String.format("%s: %s", returnMsgType.toString(), returnMsgKey));
                     }
                 } else { // Put
+                    logger.trace("PUT STORE/UPDATE");
                     // Check if there is an existing key
                     try {
                         server.getKV(returnMsgKey);
@@ -74,6 +96,7 @@ public class KVCommunicationServer extends KVCommunicationClient implements Runn
                 break;
 
             case DISCONNECT:
+                logger.trace("DISCONNECT");
                 setIsOpen(false);
                 returnMsgType = StatusType.DISCONNECT;
                 logger.info(String.format("%s", returnMsgType.toString()));
@@ -85,8 +108,6 @@ public class KVCommunicationServer extends KVCommunicationClient implements Runn
                 throw new InvalidParameterException(errorMsg);
         }
 
-        logger.debug("handleMsg exit");
-
         // Build return message
         KVMessage returnMsg = null;
         try {
@@ -95,10 +116,17 @@ public class KVCommunicationServer extends KVCommunicationClient implements Runn
             logger.error(e.getMessage());
         }
 
+        DebugHelper.logFuncExit(logger);
+
         return returnMsg;
     }
 
+    /**
+     * Main loop to receive and handle messages.
+     */
     public void run() {
+        DebugHelper.logFuncEnter(logger);
+
         while (getIsOpen()) {
             try {
                 KVMessage newMsg = receiveMessage();
@@ -114,5 +142,7 @@ public class KVCommunicationServer extends KVCommunicationClient implements Runn
 
         // Clean up
         disconnect();
+
+        DebugHelper.logFuncExit(logger);
     }
 }

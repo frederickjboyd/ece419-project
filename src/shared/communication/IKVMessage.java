@@ -2,6 +2,9 @@ package shared.communication;
 
 public interface IKVMessage {
 
+    /**
+     * Statuses for sending/receiving messages.
+     */
     public enum StatusType {
         GET, // Get - request
         GET_ERROR, // requested tuple (i.e. value) not found

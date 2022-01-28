@@ -8,8 +8,12 @@ import java.net.Socket;
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 
+import shared.DebugHelper;
 import shared.communication.KVMessage;
 
+/**
+ * Main class for communication.
+ */
 public class KVCommunicationClient {
     private static Logger logger = Logger.getRootLogger();
 
@@ -21,11 +25,15 @@ public class KVCommunicationClient {
     private static final int BUFFER_SIZE = 1024;
     private static final int DROP_SIZE = 128 * BUFFER_SIZE;
 
+    /**
+     * Constructor for client.
+     * 
+     * @param socket Endpoint for client to communicate with server
+     */
     public KVCommunicationClient(Socket socket) {
-        logger.debug("KVCommunicationClient enter");
+        DebugHelper.logFuncEnter(logger);
 
         this.socket = socket;
-        setIsOpen(true);
 
         try {
             this.in = socket.getInputStream();
@@ -35,22 +43,37 @@ public class KVCommunicationClient {
             logger.error(e.getMessage());
         }
 
-        logger.debug("KVCommunicationClient exit");
+        setIsOpen(true);
+
+        DebugHelper.logFuncExit(logger);
     }
 
+    /**
+     * Write and flush message to output stream.
+     * 
+     * @param msg
+     * @throws IOException
+     */
     public void sendMessage(KVMessage msg) throws IOException {
-        logger.debug("sendMessage enter");
+        DebugHelper.logFuncEnter(logger);
 
         byte[] msgBytes = msg.getMsgBytes();
         out.write(msgBytes);
         out.flush();
         logger.debug(String.format("SEND\nkey: %s\nvalue: %s", msg.getKey(), msg.getValue()));
 
-        logger.debug("sendMessage exit");
+        DebugHelper.logFuncExit(logger);
     }
 
+    /**
+     * Receive message from input stream, parse the bytes, and assemble a readable
+     * message.
+     * 
+     * @return Message containing status, key, and value
+     * @throws IOException
+     */
     public KVMessage receiveMessage() throws IOException {
-        logger.debug("receiveMessage enter");
+        DebugHelper.logFuncEnter(logger);
 
         int idx = 0;
         byte[] msgBytes = null;
@@ -62,8 +85,10 @@ public class KVCommunicationClient {
         boolean reading = true;
         int separatorAccum = 0;
 
+        logger.trace("Entering while loop");
+
         while (reading && separatorAccum != 3) {
-            System.out.println("idx " + idx + ": " + read);
+            logger.trace(String.format("idx %d: %d", idx, read));
             if (idx == BUFFER_SIZE) {
                 if (msgBytes == null) {
                     tmp = new byte[BUFFER_SIZE];
@@ -86,15 +111,17 @@ public class KVCommunicationClient {
                 reading = false;
             }
 
-            System.out.println("About to read next byte");
+            logger.trace("Reading next byte...");
             read = (byte) in.read();
+
             if (read == KVMessage.SEP) {
                 separatorAccum++;
             }
-            System.out.println("byte at EOL: " + read);
+
+            logger.trace(String.format("idx %d: %d", idx, read));
         }
 
-        System.out.println("out of while loop");
+        logger.trace("Exited while loop");
 
         if (msgBytes == null) {
             tmp = new byte[idx];
@@ -107,6 +134,8 @@ public class KVCommunicationClient {
 
         msgBytes = tmp;
 
+        logger.trace("Building final message");
+
         // Build final string
         KVMessage msg = null;
         try {
@@ -114,9 +143,10 @@ public class KVCommunicationClient {
         } catch (Exception e) {
             logger.error(e.getMessage());
         }
+
         logger.debug(String.format("RECEIVE\nkey: %s\nvalue: %s", msg.getKey(), msg.getValue()));
 
-        logger.debug("receiveMessage exit");
+        DebugHelper.logFuncExit(logger);
 
         return msg;
     }
@@ -125,6 +155,8 @@ public class KVCommunicationClient {
      * Disconnect from the currently connected server.
      */
     public void disconnect() {
+        DebugHelper.logFuncEnter(logger);
+
         setIsOpen(false);
 
         try {
@@ -144,12 +176,24 @@ public class KVCommunicationClient {
         } catch (Exception e) {
             logger.error(e.getMessage());
         }
+
+        DebugHelper.logFuncExit(logger);
     }
 
+    /**
+     * Get whether an instance is ready to send/receive messages.
+     * 
+     * @return True is ready, false otherwise
+     */
     public boolean getIsOpen() {
         return this.isOpen;
     }
 
+    /**
+     * Set whether an instance should be able to send/receive messages.
+     * 
+     * @param newValue
+     */
     public void setIsOpen(boolean newValue) {
         this.isOpen = newValue;
     }

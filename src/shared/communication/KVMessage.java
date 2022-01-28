@@ -4,6 +4,7 @@ import java.nio.charset.StandardCharsets;
 
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
+import shared.DebugHelper;
 
 import shared.communication.IKVMessage;
 
@@ -20,13 +21,13 @@ public class KVMessage implements IKVMessage {
     private String value;
 
     /**
-     * Constructor using byte array
+     * Constructor using byte array.
      * 
      * @param msgBytes Message in byte array format
      * @throws Exception
      */
     public KVMessage(byte[] msgBytes) throws Exception {
-        logger.debug("KVMessage(byte[]) enter");
+        DebugHelper.logFuncEnter(logger);
 
         String rawString;
         this.msgBytes = new byte[msgBytes.length];
@@ -50,17 +51,18 @@ public class KVMessage implements IKVMessage {
 
         isMessageLengthValid(this.key, this.value);
 
-        logger.debug("KVMessage(byte[]) exit");
+        DebugHelper.logFuncExit(logger);
     }
 
     /**
-     * Constructor using raw input string from user
+     * Constructor using raw input string from user.
      * 
      * @param rawInputString User's input string into client
      * @throws Exception
      */
     public KVMessage(String rawInputString) throws Exception {
-        logger.debug("KVMessage(String) enter");
+        DebugHelper.logFuncEnter(logger);
+
         String errorMsg;
 
         try {
@@ -86,11 +88,11 @@ public class KVMessage implements IKVMessage {
             throw new Exception(errorMsg);
         }
 
-        logger.debug("KVMessage(String) exit");
+        DebugHelper.logFuncExit(logger);
     }
 
     /**
-     * Constructor using explicit definitions of message parameters
+     * Constructor using explicit definitions of message parameters.
      * 
      * @param statusType Type of message (e.g. GET, PUT)
      * @param key        Unique key identifying message
@@ -98,12 +100,13 @@ public class KVMessage implements IKVMessage {
      * @throws Exception
      */
     public KVMessage(StatusType statusType, String key, String value) throws Exception {
-        logger.debug("KVMessage(StatusType, String, String) enter");
+        DebugHelper.logFuncEnter(logger);
 
         isMessageLengthValid(key, value);
 
         try {
             String msgStr = statusType.toString() + SEP + key + SEP + value + SEP;
+            logger.debug(String.format("msgStr: %s", msgStr));
             this.msgBytes = msgStr.getBytes(StandardCharsets.US_ASCII);
         } catch (Exception e) {
             String errorMsg = "Unable to convert input parameters to byte array.";
@@ -119,7 +122,7 @@ public class KVMessage implements IKVMessage {
         logger.debug("key: " + this.key);
         logger.debug("value: " + this.value);
 
-        logger.debug("KVMessage(StatusType, String, String) exit");
+        DebugHelper.logFuncExit(logger);
     }
 
     /**
@@ -130,7 +133,7 @@ public class KVMessage implements IKVMessage {
      * @param separator  Where to split string.
      */
     private void splitAndSetMessageInfo(String rawMessage, String separator) {
-        logger.debug("splitAndSetMessageInfo enter");
+        DebugHelper.logFuncEnter(logger);
 
         String[] rawStringArr = rawMessage.split(separator, 4);
         // statusType needs to match enum value (case sensitive)
@@ -138,7 +141,7 @@ public class KVMessage implements IKVMessage {
         this.key = rawStringArr[1];
         this.value = rawStringArr[2];
 
-        logger.debug("splitAndSetMessageInfo exit");
+        DebugHelper.logFuncExit(logger);
     }
 
     /**
@@ -150,11 +153,13 @@ public class KVMessage implements IKVMessage {
      * @throws Exception
      */
     private boolean isMessageLengthValid(String key, String value) throws Exception {
-        logger.debug("isMessageLengthValid enter");
+        DebugHelper.logFuncEnter(logger);
+        String errorMsg;
 
         int keySizeBytes = key.getBytes(StandardCharsets.US_ASCII).length;
         int valueSizeBytes = value.getBytes(StandardCharsets.US_ASCII).length;
-        String errorMsg;
+        logger.trace(String.format("keySizeBytes: %d", keySizeBytes));
+        logger.trace(String.format("valueSizeBytes: %d", valueSizeBytes));
 
         if (keySizeBytes > MAX_KEY_SIZE_BYTES) {
             errorMsg = String.format("Key length of %s bytes exceeds limit of %s bytes.", keySizeBytes,
@@ -170,7 +175,7 @@ public class KVMessage implements IKVMessage {
             throw new Exception(errorMsg);
         }
 
-        logger.debug("isMessageLengthValid exit");
+        DebugHelper.logFuncExit(logger);
 
         return true;
     }

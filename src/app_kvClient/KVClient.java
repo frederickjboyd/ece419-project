@@ -29,18 +29,12 @@ import org.apache.log4j.Logger;
 
 public class KVClient implements IKVClient {
     private static Logger logger = Logger.getRootLogger();
-    private Socket clientSocket;
-    private OutputStream output;
-    private InputStream input;
     private KVStore kvStore = null;
     private BufferedReader stdin;
     private boolean stop = false;
 
     private String serverAddress;
     private int serverPort;
-
-    private static final int BUFFER_SIZE = 1024;
-    private static final int DROP_SIZE = 1024 * BUFFER_SIZE;
     private static final String PROMPT = "KVClient> ";
 
     @Override
@@ -49,17 +43,15 @@ public class KVClient implements IKVClient {
         try {
             kvStore = new KVStore(hostname, port);
             kvStore.connect();
-            // stop=true;
-            logger.info("client end: New connection established");
+            logger.info("kvclient: New connection established");
         } catch (IOException ioe) {
-            logger.error("Client end: to establish new connection!");
+            logger.error("kvclient: to establish new connection!");
 
         }
     }
 
     @Override
     public KVStore getStore() {
-        // TODO Auto-generated method stub
         return kvStore;
     }
 
@@ -81,7 +73,7 @@ public class KVClient implements IKVClient {
                 stop = true;
                 // setRunning(false);
                 printError("CLI does not respond - Application terminated ");
-                logger.error("client end: CLI not respond!");
+                logger.error("kvclient: CLI not respond!");
             }
         }
     }
@@ -94,31 +86,38 @@ public class KVClient implements IKVClient {
             stop = true;
             kvStore.disconnect();
             System.out.println(PROMPT + "Application exit!");
+            logger.info("kvclient: Application quit and connection disconnect");
+
 
         } else if (tokens[0].equals("connect")) {
             if (tokens.length == 3) {
                 try {
                     serverAddress = tokens[1];
                     serverPort = Integer.parseInt(tokens[2]);
-                    try {
-                        newConnection(serverAddress, serverPort);
-                    } catch (Exception e) {
-                        // TODO: add logging to me!
-                        e.getMessage();
-                    }
+                    // try {
+                    //     newConnection(serverAddress, serverPort);
+                    // } catch (Exception e) {
+                    //     // TODO: add logging to me!
+                    //     e.getMessage();
+                    // }
+                    newConnection(serverAddress, serverPort);
+
                 } catch (NumberFormatException nfe) {
                     printError("No valid address. Port must be a number!");
-                    logger.info("Unable to parse argument <port>", nfe);
+                    logger.error("Unable to parse argument <port>", nfe);
+                } catch (UnknownHostException e) {
+                    printError("Unknown Host!");
+                    logger.error("Unknown Host!", e);
+                } catch (IOException e) {
+                    printError("Could not establish connection!");
+                    logger.error("Could not establish connection!", e);
+                } catch (Exception e) {
+                    printError("Other exception");
+                    logger.error("Other exception", e);
                 }
-                // } catch (UnknownHostException e) {
-                // printError("Unknown Host!");
-                // logger.info("Unknown Host!", e);
-                // } catch (IOException e) {
-                // printError("Could not establish connection!");
-                // logger.warn("Could not establish connection!", e);
-                // }
             } else {
                 printError("Invalid number of parameters!");
+                logger.error("Invalid number of parameters!");
             }
 
         } else if (tokens[0].equals("put")) {
@@ -136,23 +135,26 @@ public class KVClient implements IKVClient {
                     }
                     try {
                         kvStore.put(tokens[1].toString(), msg.toString());
-                        logger.info("PUT: Update Key: " + tokens[1] + "values:" + msg.toString());
+                        logger.info("kvclient Update Key: " + tokens[1] + "\t values:" + msg.toString());
                     } catch (Exception e) {
-                        // TODO: add logging to me! :)
-                        e.getMessage();
+                        // e.getMessage();
+                        logger.error("kvclient put exception",e);
                     }
                 } else {
                     printError("Not connected!");
+                    // logger.error("kvclient not connected");
+                    
                 }
             } else {
                 printError("Error Missing value or key!");
+                // logger.error("kvclient get command missing value or key");
+
             }
 
         } else if (tokens[0].equals("get")) {
             if (tokens.length >= 1) {
                 if (kvStore != null && kvStore.isRunning()) {
                     StringBuilder msg = new StringBuilder();
-                    String key = tokens[1];
                     for (int i = 1; i < tokens.length; i++) {
                         msg.append(tokens[i]);
                         if (i != tokens.length - 1) {
@@ -160,17 +162,22 @@ public class KVClient implements IKVClient {
                         }
                     }
                     try {
-                        kvStore.get(key);
-                        logger.info("GET: retrieve Key: " + tokens[1] + "from server");
+                        kvStore.get(tokens[1]);
+                        logger.info("kvclient GET: retrieve Key: " + tokens[1] + "from server");
                     } catch (Exception e) {
                         // TODO: add logging to me
-                        e.getMessage();
+                        // e.getMessage();
+                        logger.error("kvclient get exception",e);
                     }
                 } else {
                     printError("Not connected!");
+                    // logger.error("kvclient not connected");
+
                 }
             } else {
                 printError("Error Missing value or key!");
+                // logger.error("kvclient put command missing key");
+
             }
 
         } else if (tokens[0].equals("disconnect")) {
@@ -264,24 +271,6 @@ public class KVClient implements IKVClient {
         } else {
             return LogSetup.UNKNOWN_LEVEL;
         }
-    }
-
-    public synchronized void closeConnection() {
-        logger.info("try to close connection ...");
-
-        try {
-            tearDownConnection();
-        } catch (IOException ioe) {
-            logger.error("Unable to close connection!");
-        }
-    }
-
-    private void tearDownConnection() throws IOException {
-        // setRunning(false);
-        stop = true;
-        logger.info("tearing down the connection ...");
-        kvStore.disconnect();
-        logger.info("connection closed!");
     }
 
     public static void main(String[] args) {

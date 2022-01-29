@@ -19,10 +19,11 @@ jobs:
       - if: github.event_name == 'pull_request'
         uses: actions/checkout@v2
         with:
-          args: "--aosp" # Use 4-space indentation
           ref: ${{ github.event.pull_request.head.ref }}
       - name: Google Java Format
         uses: axel-op/googlejavaformat-action@3.5.0
+        with:
+          args: "--aosp" # Use 4-space indentation
 
   build:
     runs-on: ubuntu-latest

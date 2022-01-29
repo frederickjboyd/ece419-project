@@ -66,7 +66,7 @@ public class KVCommunicationServer extends KVCommunicationClient implements Runn
                 if (msg.getValue().equals("")) { // Delete
                     logger.trace("PUT DELETE");
                     try {
-                        server.putKV(msgKey, "");
+                        server.putKV(msgKey, msg.getValue());
                         returnMsgType = StatusType.DELETE_SUCCESS;
                     } catch (Exception e) {
                         returnMsgType = StatusType.DELETE_ERROR;

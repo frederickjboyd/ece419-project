@@ -188,11 +188,16 @@ public class KVMessage implements IKVMessage {
     }
 
     /**
+     * 
+     * 
+     * 
+     * 
      * @return The key that is associated with this message,
      *         null if not key is associated.
      */
-    public String getKey() {
-        return this.key;
+    public String getKey()
+    {
+        return this.key;                      
     }
 
     /**

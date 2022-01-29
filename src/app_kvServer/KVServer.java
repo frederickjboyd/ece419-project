@@ -121,7 +121,21 @@ public class KVServer implements IKVServer, Runnable {
 
     @Override
     public void putKV(String key, String value) throws Exception {
-        if (!storage.put(key, value)) {
+        //System.out.println("RECEIVED A PUT"+value);
+        // If value was blank, delete
+        if (value == ""){
+            if (inStorage(key)){
+                //System.out.println("****A blank value was PUT, delete key: "+key);
+                // Delete key if no value was provided in put
+                storage.delete(key);
+            }
+            else{
+                logger.error("Tried to delete non-existent key: "+key);
+                throw new Exception("Tried to delete non-existent key!");
+            }
+
+        }
+        else if (!storage.put(key, value)) {
             logger.error("Failed to PUT (" + key + ',' + value + ") into map!");
             throw new Exception("Failed to put KV pair in storage!");
         }

@@ -108,6 +108,14 @@ public class PersistentStorage implements IPersistentStorage {
         for (Map.Entry<String, String> entry : this.referenceMap.entrySet()) {
             properties.put(entry.getKey(), entry.getValue());
         }
+
+        // Debug delete
+        System.out.println("***Show hash map right before writing");
+        for (Map.Entry<String, String> entry : this.referenceMap.entrySet()) {
+            System.out.println(entry.getKey() + ":" + entry.getValue());
+        }
+
+
         // Try write to disk
         try {
             properties.store(new FileOutputStream(this.directory + '/' + this.databaseName), null);
@@ -158,11 +166,16 @@ public class PersistentStorage implements IPersistentStorage {
              * otherwise the method returns NULL.
              */
             String value = this.referenceMap.remove(key);
+            // System.out.println("***Show hash map afer deleting key: "+key);
+            // for (Map.Entry<String, String> entry : this.referenceMap.entrySet()) {
+            //     System.out.println(entry.getKey() + ":" + entry.getValue());
+            // }
 
             if (value == null) {
                 logger.info("Failed to delete key: " + key + " as no values exist");
                 return false;
-            } else {
+            }
+            else {
                 writeMap();
                 logger.info("Deleted key and value: " + key + " " + value);
                 return true;

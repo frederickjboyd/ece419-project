@@ -197,7 +197,7 @@ public class KVMessage implements IKVMessage {
      */
     public String getKey()
     {
-        return this.key;                      
+return this.key;                      
     }
 
     /**

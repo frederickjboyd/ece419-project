@@ -24,6 +24,7 @@ jobs:
         run: ant -noinput -buildfile build.xml
 
   junit-tests:
+    runs-on: ubuntu-latest
     needs: [build]
 
     steps:

@@ -60,7 +60,8 @@ public class KVCommunicationClient {
         byte[] msgBytes = msg.getMsgBytes();
         out.write(msgBytes);
         out.flush();
-        logger.debug(String.format("SEND\nkey: %s\nvalue: %s", msg.getKey(), msg.getValue()));
+        logger.debug(String.format("SEND %s > key: %s || value: %s", msg.getStatus().toString(), msg.getKey(),
+                msg.getValue()));
 
         DebugHelper.logFuncExit(logger);
     }
@@ -144,7 +145,8 @@ public class KVCommunicationClient {
             logger.error(e.getMessage());
         }
 
-        logger.debug(String.format("RECEIVE\nkey: %s\nvalue: %s", msg.getKey(), msg.getValue()));
+        logger.debug(String.format("RECEIVE %s > key: %s || value: %s", msg.getStatus().toString(), msg.getKey(),
+                msg.getValue()));
 
         DebugHelper.logFuncExit(logger);
 

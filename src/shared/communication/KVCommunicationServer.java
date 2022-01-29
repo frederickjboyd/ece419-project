@@ -46,52 +46,53 @@ public class KVCommunicationServer extends KVCommunicationClient implements Runn
         DebugHelper.logFuncEnter(logger);
 
         StatusType returnMsgType = null;
-        String returnMsgKey = msg.getKey();
+        String msgKey = msg.getKey(); // Should never change
         String returnMsgValue = "";
 
         switch (msg.getStatus()) {
             case GET:
                 logger.trace("GET");
                 try {
-                    returnMsgValue = server.getKV(returnMsgKey);
+                    returnMsgValue = server.getKV(msgKey);
                     returnMsgType = StatusType.GET_SUCCESS;
-                    logger.info(String.format("%s: %s, %s", returnMsgType.toString(), returnMsgKey, returnMsgValue));
+                    logger.info(String.format("%s: %s, %s", returnMsgType.toString(), msgKey, returnMsgValue));
                 } catch (Exception e) {
                     returnMsgType = StatusType.GET_ERROR;
-                    logger.info(String.format("%s: %s", returnMsgType.toString(),
-                            returnMsgKey));
+                    logger.error(String.format("%s: %s", returnMsgType.toString(), msgKey));
                 }
                 break;
 
             case PUT:
-                if (msg.getValue() == "") { // Delete
+                if (msg.getValue().equals("")) { // Delete
                     logger.trace("PUT DELETE");
                     try {
-                        // TODO: add code here
+                        server.putKV(msgKey, msg.getValue());
+                        returnMsgType = StatusType.DELETE_SUCCESS;
                     } catch (Exception e) {
                         returnMsgType = StatusType.DELETE_ERROR;
-                        logger.info(
-                                String.format("%s: %s", returnMsgType.toString(), returnMsgKey));
+                        logger.error(String.format("%s: %s", returnMsgType.toString(), msgKey));
                     }
-                } else { // Put
+                } else { // Store/Update
                     logger.trace("PUT STORE/UPDATE");
                     // Check if there is an existing key
                     try {
-                        server.getKV(returnMsgKey);
+                        server.getKV(msgKey);
+                        returnMsgType = StatusType.PUT_UPDATE;
+                        logger.trace("PUT UPDATE");
                     } catch (Exception e) {
-                        returnMsgType = StatusType.PUT; // New key-value pair
+                        returnMsgType = StatusType.PUT_SUCCESS;
+                        logger.trace("PUT STORE");
                     }
 
                     // Store/Update key-value pair
                     try {
-                        server.putKV(msg.getKey(), msg.getValue());
-                        returnMsgType = StatusType.PUT_SUCCESS;
+                        server.putKV(msgKey, msg.getValue());
                         returnMsgValue = msg.getValue();
                     } catch (Exception e) {
                         returnMsgType = StatusType.PUT_ERROR;
                     }
 
-                    logger.info(String.format("%s: %s, %s", returnMsgType.toString(), returnMsgKey, returnMsgValue));
+                    logger.info(String.format("%s: %s, %s", returnMsgType.toString(), msgKey, returnMsgValue));
                 }
                 break;
 
@@ -99,7 +100,6 @@ public class KVCommunicationServer extends KVCommunicationClient implements Runn
                 logger.trace("DISCONNECT");
                 setIsOpen(false);
                 returnMsgType = StatusType.DISCONNECT;
-                logger.info(String.format("%s", returnMsgType.toString()));
                 break;
 
             default:
@@ -111,7 +111,7 @@ public class KVCommunicationServer extends KVCommunicationClient implements Runn
         // Build return message
         KVMessage returnMsg = null;
         try {
-            returnMsg = new KVMessage(returnMsgType, returnMsgKey, returnMsgValue);
+            returnMsg = new KVMessage(returnMsgType, msgKey, returnMsgValue);
         } catch (Exception e) {
             logger.error(e.getMessage());
         }

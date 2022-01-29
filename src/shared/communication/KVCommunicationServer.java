@@ -63,7 +63,7 @@ public class KVCommunicationServer extends KVCommunicationClient implements Runn
                 break;
 
             case PUT:
-                if (msg.getValue().equals("")) { // Delete
+                if (msg.getValue().equals("") || msg.getValue().equals("null")) { // Delete
                     logger.trace("PUT DELETE");
                     try {
                         server.putKV(msgKey, msg.getValue());

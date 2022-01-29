@@ -121,7 +121,21 @@ public class KVServer implements IKVServer, Runnable {
 
     @Override
     public void putKV(String key, String value) throws Exception {
-        if (!storage.put(key, value)) {
+        //System.out.println("RECEIVED A PUT"+value);
+        // If value was blank, delete
+        if (value.equals("")){
+            if (inStorage(key)){
+                //System.out.println("****A blank value was PUT, delete key: "+key);
+                // Delete key if no value was provided in put
+                storage.delete(key);
+            }
+            else{
+                logger.error("Tried to delete non-existent key: "+key);
+                throw new Exception("Tried to delete non-existent key!");
+            }
+
+        }
+        else if (!storage.put(key, value)) {
             logger.error("Failed to PUT (" + key + ',' + value + ") into map!");
             throw new Exception("Failed to put KV pair in storage!");
         }
@@ -218,10 +232,10 @@ public class KVServer implements IKVServer, Runnable {
      */
     public static void main(String[] args) {
         try {
-            new LogSetup("logs/server.log", Level.DEBUG);
+            new LogSetup("logs/server.log", Level.ALL);
             if (args.length != 3) {
                 System.out.println("Error! Invalid number of arguments!");
-                System.out.println("Usage: Server <port>!");
+                System.out.println("Usage: Server <port> <cachesize> <cachetype>!");
             } else {
                 int port = Integer.parseInt(args[0]);
                 int cacheSize = Integer.parseInt(args[1]);
@@ -234,7 +248,7 @@ public class KVServer implements IKVServer, Runnable {
             System.exit(1);
         } catch (NumberFormatException nfe) {
             System.out.println("Error! Invalid argument <port>! Not a number!");
-            System.out.println("Usage: Server <port>!");
+            System.out.println("Usage: Server <port> <cachesize> <cachetype>!");
             System.exit(1);
         }
     }

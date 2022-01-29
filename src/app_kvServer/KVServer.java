@@ -123,7 +123,7 @@ public class KVServer implements IKVServer, Runnable {
     public void putKV(String key, String value) throws Exception {
         //System.out.println("RECEIVED A PUT"+value);
         // If value was blank, delete
-        if (value == ""){
+        if (value.equals("")){
             if (inStorage(key)){
                 //System.out.println("****A blank value was PUT, delete key: "+key);
                 // Delete key if no value was provided in put

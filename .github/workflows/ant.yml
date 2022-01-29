@@ -33,5 +33,5 @@ jobs:
         with:
           java-version: "11"
           distribution: "temurin"
-      - name: Run JUint tests
+      - name: Run JUnit tests
         run: ant test -noinput -buildfile build.xml

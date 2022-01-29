@@ -163,7 +163,7 @@ public class KVClient implements IKVClient {
                     }
                     try {
                         kvStore.get(tokens[1]);
-                        logger.info("kvclient GET: retrieve Key: " + tokens[1] + "from server");
+                        logger.info("kvclient GET: retrieve Key: " + tokens[1] + " from server");
                     } catch (Exception e) {
                         // TODO: add logging to me
                         // e.getMessage();

@@ -218,7 +218,7 @@ public class KVServer implements IKVServer, Runnable {
      */
     public static void main(String[] args) {
         try {
-            new LogSetup("logs/server.log", Level.ALL);
+            new LogSetup("logs/server.log", Level.DEBUG);
             if (args.length != 3) {
                 System.out.println("Error! Invalid number of arguments!");
                 System.out.println("Usage: Server <port>!");

@@ -122,20 +122,36 @@ public class KVClient implements IKVClient {
 
         } else if (tokens[0].equals("put")) {
             if (tokens.length >= 2) {
-                System.out.println("kvStore: " + kvStore);
-                System.out.println("isRunning: " + kvStore.isRunning());
                 if (kvStore != null && kvStore.isRunning()) {
                     System.out.println("Inside put if statement!");
-                    StringBuilder msg = new StringBuilder();
-                    for (int i = 2; i < tokens.length; i++) {
-                        msg.append(tokens[i]);
-                        if (i != tokens.length - 1) {
-                            msg.append(" ");
-                        }
-                    }
+
+                    // Find the start of the message then transfer everything over
+                    // StringBuilder msg = new StringBuilder();
+                    String key = tokens[1].toString();
+                    String value = "";
+                    
+                    if (tokens.length == 2){
+                        // msg.append("null");
+                        value = "null";
+                    }else {
+                        int msgKeyIdx = cmdLine.indexOf(tokens[1].toString())+tokens[1].length();
+                        // deal with issue if key and value are the same 
+                        int msgStartIdx = cmdLine.substring(msgKeyIdx, cmdLine.length()).indexOf(tokens[2].toString()) + msgKeyIdx;
+                        // int msgStartIdx = cmdLine.indexOf(tokens[2].toString());
+                        value = cmdLine.substring(msgStartIdx, cmdLine.length());
+                    } 
+
+                    // cases for if white space in msg not important
+                    // for (int i = 2; i < tokens.length; i++) {
+                    //     msg.append(tokens[i]);
+                    //     if (i != tokens.length - 1) {
+                    //         msg.append(" ");
+                    //     }
+                    // }
                     try {
-                        kvStore.put(tokens[1].toString(), msg.toString());
-                        logger.info("kvclient Update Key: " + tokens[1] + "\t values:" + msg.toString());
+                        // kvStore.put(tokens[1].toString(), msg.toString());
+                        kvStore.put(key, value);
+                        logger.info("kvclient Update Key: " + key + "\t values:" + value);
                     } catch (Exception e) {
                         // e.getMessage();
                         logger.error("kvclient put exception",e);

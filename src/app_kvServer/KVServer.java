@@ -63,7 +63,7 @@ public class KVServer implements IKVServer, Runnable {
             this.storage = new PersistentStorage(databaseName);
         }
 
-        // Start new client thread
+        // Start main thread
         newThread = new Thread(this);
         newThread.start();
     }
@@ -107,6 +107,7 @@ public class KVServer implements IKVServer, Runnable {
         // TODO Auto-generated method stub
         return false;
     }
+
 
     @Override
     public String getKV(String key) throws Exception {
@@ -153,7 +154,7 @@ public class KVServer implements IKVServer, Runnable {
 
     @Override
     public void run() {
-
+        // boolean running status
         running = initializeServer();
 
         if (serverSocket != null) {
@@ -161,12 +162,11 @@ public class KVServer implements IKVServer, Runnable {
                 try {
                     Socket client = serverSocket.accept();
 
-                    // To be replaced
                     KVCommunicationServer connection = new KVCommunicationServer(client, this);
 
                     newThread = new Thread(connection);
                     newThread.start();
-                    // Append new thread to global thread list
+                    // Append new client thread to global thread list
                     threadList.add(newThread);
 
                     logger.info("Connected to "
@@ -181,6 +181,7 @@ public class KVServer implements IKVServer, Runnable {
         logger.info("Server stopped.");
     }
 
+    /**Server initialiation helper. Initializes socket on given port. */
     private boolean initializeServer() {
         logger.info("Initialize server ...");
         try {
@@ -213,6 +214,7 @@ public class KVServer implements IKVServer, Runnable {
     public void close() {
         running = false;
         try {
+            // Stop running threads gracefully
             for (int i = 0; i < threadList.size(); i++) {
                 threadList.get(i).interrupt();
             }

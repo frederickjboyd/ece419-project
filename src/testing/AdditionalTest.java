@@ -49,6 +49,25 @@ public class AdditionalTest extends TestCase {
     }
 
     @Test
+    public void testEmptyKeyAndMsg() {
+        //** This test mainly test if there exist space in the value the spaces will all be recorded */
+
+        String key = "";
+        String value = "";
+        KVMessage response = null;
+        Exception ex = null;
+
+        try {
+            response = kvClient.put(key, value);
+        } catch (Exception e) {
+            ex = e;
+        }
+        System.out.println("test testEmptyKeyAndMsg success");
+        assertTrue(response.getStatus() == StatusType.DELETE_ERROR);
+        
+    }
+
+    @Test
     public void testPutWithDiffCap() {
         //** This test mainly test that the capitalization of key will matter and be registered as individual query*/
         String key = "foo";

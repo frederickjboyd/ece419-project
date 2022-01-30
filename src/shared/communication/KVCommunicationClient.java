@@ -10,6 +10,7 @@ import org.apache.log4j.Logger;
 
 import shared.DebugHelper;
 import shared.communication.KVMessage;
+import shared.communication.IKVMessage.StatusType;
 
 /**
  * Main class for communication.
@@ -85,6 +86,7 @@ public class KVCommunicationClient {
         byte read = (byte) in.read();
         boolean reading = true;
         int separatorAccum = 0;
+        KVMessage msg = null;
 
         logger.trace("Entering while loop");
 
@@ -110,6 +112,18 @@ public class KVCommunicationClient {
 
             if (msgBytes != null && msgBytes.length + idx >= DROP_SIZE) {
                 reading = false;
+            }
+
+            if (read == -1) {
+                logger.error("Disconnection while trying to receive a message.");
+                try {
+                    msg = new KVMessage(StatusType.DISCONNECT, "", "");
+                } catch (Exception e) {
+                    logger.error(e.getMessage());
+                }
+
+                DebugHelper.logFuncExit(logger);
+                return msg;
             }
 
             logger.trace("Reading next byte...");
@@ -138,7 +152,6 @@ public class KVCommunicationClient {
         logger.trace("Building final message");
 
         // Build final string
-        KVMessage msg = null;
         try {
             msg = new KVMessage(msgBytes);
         } catch (Exception e) {

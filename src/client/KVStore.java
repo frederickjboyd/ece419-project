@@ -25,9 +25,6 @@ public class KVStore {
      */
 
     private Logger logger = Logger.getRootLogger();
-    private Set<ClientSocketListener> listeners;
-    private boolean running;
-
     private Socket clientSocket;
     private KVCommunicationClient kvCommunication;
 
@@ -43,10 +40,7 @@ public class KVStore {
         try {
             clientSocket = new Socket(this.address, this.port);
             kvCommunication = new KVCommunicationClient(clientSocket);
-            // System.out.println("Connection is established! Server address = "+
-            // serverAddress +", port = "+serverPort);
-            // logger.info("Connection is established! Server address = "+ serverAddress +",
-            // port = "+serverPort);
+            logger.info("Connection established! Server address = "+ this.address +",port = "+this.port);
         } catch (NumberFormatException nfe) {
             logger.error("Unable to parse argument <port>", nfe);
             throw new NumberFormatException();

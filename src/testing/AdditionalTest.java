@@ -17,17 +17,14 @@ public class AdditionalTest extends TestCase {
             kvClient.connect();
         } catch (Exception e) {
         }
-        System.out.println("set up success");
+        System.out.println("additional test set up success");
 
     }
 
     @Test
-    public void testStub() {
-        assertTrue(true);
-    }
+    public void testPutWithSpaceInMsg() {
+        //** This test mainly test if there exist space in the value the spaces will all be recorded */
 
-    @Test
-    public void putWithSpaceInMsg() {
         String key = "foo2";
         String value = "bar     2";
         KVMessage response = null;
@@ -42,14 +39,37 @@ public class AdditionalTest extends TestCase {
 
         try {
             getResponse = kvClient.get(key);
+        } catch (Exception e2) {
+            ex = e2;
+        }
 
+        System.out.println("test putWithSpaceInMsg success");
+        assertTrue(ex == null && getResponse.getValue().equals("bar     2") && (response.getStatus() == StatusType.PUT_SUCCESS || response.getStatus() == StatusType.PUT_UPDATE));
+    
+    }
+
+    @Test
+    public void testPutWithDiffCap() {
+        //** This test mainly test that the capitalization of key will matter and be registered as individual query*/
+        String key = "foo";
+        String value = "bar";
+        String keyCap = "Foo";
+        String valueCap = "Bar";
+        KVMessage response = null;
+        KVMessage responseCap = null;
+        Exception ex = null;
+
+        try {
+            response = kvClient.put(key, value);
+            responseCap = kvClient.put(keyCap, valueCap);
         } catch (Exception e) {
             ex = e;
         }
 
-        System.out.println("test putWithSpaceInMsg success");
-        assertTrue(ex == null && response.getValue().equals(value) && response.getStatus() == StatusType.PUT_SUCCESS);
+        System.out.println("test putWithDiffCap success");
+        assertTrue(ex == null && !response.getValue().equals(responseCap.getValue()) && (response.getStatus() == StatusType.PUT_SUCCESS || response.getStatus() == StatusType.PUT_UPDATE));
     
     }
+
 
 }

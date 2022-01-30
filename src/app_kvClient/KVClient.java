@@ -138,7 +138,7 @@ public class KVClient implements IKVClient {
                         // deal with issue if key and value are the same 
                         int msgStartIdx = cmdLine.substring(msgKeyIdx, cmdLine.length()).indexOf(tokens[2].toString()) + msgKeyIdx;
                         // int msgStartIdx = cmdLine.indexOf(tokens[2].toString());
-                        value = cmdLine.substring(msgStartIdx, cmdLine.length());
+                        value = cmdLine.substring(msgStartIdx, cmdLine.length()).toString();
                     } 
 
                     // cases for if white space in msg not important
@@ -151,7 +151,7 @@ public class KVClient implements IKVClient {
                     try {
                         // kvStore.put(tokens[1].toString(), msg.toString());
                         kvStore.put(key, value);
-                        logger.info("kvclient Update Key: " + key + "\t values:" + value);
+                        logger.info("kvclient Update database with Key: " + key + " and values:" + value);
                     } catch (Exception e) {
                         // e.getMessage();
                         logger.error("kvclient put exception",e);

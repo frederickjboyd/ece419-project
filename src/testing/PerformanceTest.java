@@ -46,7 +46,7 @@ public class PerformanceTest extends TestCase {
         String key = "test";
         KVMessage response = null;
         Exception ex = null;
-        int loops = 2000;
+        int loops = 500;
         String output = "";
         double totalBytes = 0;
 
@@ -97,7 +97,7 @@ public class PerformanceTest extends TestCase {
         String key = "test";
         KVMessage response = null;
         Exception ex = null;
-        int loops = 2000;
+        int loops = 500;
         String output = "";
         double totalBytes = 0;
 
@@ -147,7 +147,7 @@ public class PerformanceTest extends TestCase {
         String key = "test";
         KVMessage response = null;
         Exception ex = null;
-        int loops = 2000;
+        int loops = 500;
         String output = "";
         double totalBytes = 0;
 

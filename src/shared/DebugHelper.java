@@ -14,7 +14,7 @@ public class DebugHelper {
     }
 
     /**
-     * Helper function to log a function's entry point.
+     * Helper function to log a function's exit point.
      * 
      * @param logger Log4j logger
      */

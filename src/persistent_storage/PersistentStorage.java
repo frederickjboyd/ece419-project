@@ -22,7 +22,10 @@ public class PersistentStorage implements IPersistentStorage {
     private String databaseName = "database.properties";
     private File testFile;
 
-    // Database initialization
+    /**Initializes the database properties file.
+     * Check if directory exists - if not, create it.
+     * Check if data.properties file exists - if not, create it.
+     */
     private synchronized void init() {
         if (this.testFile == null) {
             logger.info("Running database initialization!");
@@ -52,22 +55,24 @@ public class PersistentStorage implements IPersistentStorage {
     }
 
     // NOTE: Java does not have optional arguments - overload instead
-    // Build a map - no database existing
+    /**Build a map - no database existing on file.*/
     public PersistentStorage() {
         init();
         Map<String, String> tempMap = new HashMap<String, String>();
+        // Activate blank synchronized map
         this.referenceMap = Collections.synchronizedMap(tempMap);
     }
 
     /**
-     * Load existing map from storage
-     * 
+     * Load existing map from storage.
      * @param databaseName global database name
      */
     public PersistentStorage(String databaseName) {
         this.databaseName = databaseName;
+        // Check for directory/prop file present
         init();
 
+        // Load local map with existing entries in storage
         Map<String, String> tempMap = new HashMap<String, String>();
         Properties properties = new Properties();
         try {
@@ -78,6 +83,7 @@ public class PersistentStorage implements IPersistentStorage {
         } catch (IOException e) {
             logger.error("Failed to load existing properties file!", e);
         }
+        // Activate synchronized map
         this.referenceMap = Collections.synchronizedMap(tempMap);
     }
 
@@ -100,7 +106,7 @@ public class PersistentStorage implements IPersistentStorage {
     // ldapContent.put(key, properties.get(key).toString());
     // }
 
-    // Writes the current map to disk
+    /**Write the current map to disk */
     private synchronized void writeMap() {
         Properties properties = new Properties();
         // Loop through entries in current map
@@ -109,10 +115,10 @@ public class PersistentStorage implements IPersistentStorage {
         }
 
         // Debug delete
-        System.out.println("***Show hash map right before writing");
-        for (Map.Entry<String, String> entry : this.referenceMap.entrySet()) {
-            System.out.println(entry.getKey() + ":" + entry.getValue());
-        }
+        // System.out.println("***Show hash map right before writing");
+        // for (Map.Entry<String, String> entry : this.referenceMap.entrySet()) {
+        //     System.out.println(entry.getKey() + ":" + entry.getValue());
+        // }
 
         // Try write to disk
         try {
@@ -122,7 +128,11 @@ public class PersistentStorage implements IPersistentStorage {
         }
     }
 
-    // Put new key-val pair into map, write to disk
+
+    /** Put new key-val pair into local map, then call write to disk
+     * @param key Key to put entry under 
+     * @param value Value to store under the given key
+     */
     @Override
     public synchronized boolean put(String key, String value) {
         try {
@@ -136,7 +146,9 @@ public class PersistentStorage implements IPersistentStorage {
         }
     }
 
-    // Get value given key
+    /** Get a value given a key
+     * @param key Search for value under this key
+     */
     @Override
     public synchronized String get(String key) {
         try {
@@ -154,7 +166,9 @@ public class PersistentStorage implements IPersistentStorage {
         }
     }
 
-    // Delete key and value from storage
+    /** Delete the given key and its entry from the map, then write to disk
+     * @param key Key to delete
+     */
     @Override
     public synchronized boolean delete(String key) {
         try {
@@ -168,11 +182,14 @@ public class PersistentStorage implements IPersistentStorage {
             // for (Map.Entry<String, String> entry : this.referenceMap.entrySet()) {
             // System.out.println(entry.getKey() + ":" + entry.getValue());
             // }
-
+            
+            // Tried to delete something that doesn't have entries
             if (value == null) {
                 logger.info("Failed to delete key: " + key + " as no values exist");
                 return false;
-            } else {
+            } 
+            // Delete was succesful, write to disk
+            else {
                 writeMap();
                 logger.info("Deleted key and value: " + key + " " + value);
                 return true;
@@ -183,7 +200,9 @@ public class PersistentStorage implements IPersistentStorage {
         }
     }
 
-    // boolean - check if key-val exists in map
+    /** Check if key exists in our map, return true if found, false if not.
+     * @param key Key to search for
+     */
     @Override
     public synchronized boolean existsCheck(String key) {
         if (this.referenceMap.isEmpty()) {
@@ -200,7 +219,7 @@ public class PersistentStorage implements IPersistentStorage {
         }
     }
 
-    // Fully wipe storage
+    /** Fully wipe the data.properties file */
     @Override
     public synchronized void wipeStorage() {
         try {

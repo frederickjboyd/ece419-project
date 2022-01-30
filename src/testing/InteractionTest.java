@@ -39,7 +39,8 @@ public class InteractionTest extends TestCase {
 
         }
         System.out.println("test put success");
-        assertTrue(ex == null && (response.getStatus() == StatusType.PUT_SUCCESS || response.getStatus() == StatusType.PUT_UPDATE));
+        assertTrue(ex == null
+                && (response.getStatus() == StatusType.PUT_SUCCESS || response.getStatus() == StatusType.PUT_UPDATE));
     }
 
     @Test
@@ -129,5 +130,4 @@ public class InteractionTest extends TestCase {
 
         assertTrue(ex == null && response.getStatus() == StatusType.GET_ERROR);
     }
-
 }

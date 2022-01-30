@@ -88,17 +88,16 @@ public class KVClient implements IKVClient {
             System.out.println(PROMPT + "Application exit!");
             logger.info("kvclient: Application quit and connection disconnect");
 
-
         } else if (tokens[0].equals("connect")) {
             if (tokens.length == 3) {
                 try {
                     serverAddress = tokens[1];
                     serverPort = Integer.parseInt(tokens[2]);
                     // try {
-                    //     newConnection(serverAddress, serverPort);
+                    // newConnection(serverAddress, serverPort);
                     // } catch (Exception e) {
-                    //     // TODO: add logging to me!
-                    //     e.getMessage();
+                    // // TODO: add logging to me!
+                    // e.getMessage();
                     // }
                     newConnection(serverAddress, serverPort);
 
@@ -129,24 +128,25 @@ public class KVClient implements IKVClient {
                     // StringBuilder msg = new StringBuilder();
                     String key = tokens[1].toString();
                     String value = "";
-                    
-                    if (tokens.length == 2){
+
+                    if (tokens.length == 2) {
                         // msg.append("null");
                         value = "null";
-                    }else {
-                        int msgKeyIdx = cmdLine.indexOf(tokens[1].toString())+tokens[1].length();
-                        // deal with issue if key and value are the same 
-                        int msgStartIdx = cmdLine.substring(msgKeyIdx, cmdLine.length()).indexOf(tokens[2].toString()) + msgKeyIdx;
+                    } else {
+                        int msgKeyIdx = cmdLine.indexOf(tokens[1].toString()) + tokens[1].length();
+                        // deal with issue if key and value are the same
+                        int msgStartIdx = cmdLine.substring(msgKeyIdx, cmdLine.length()).indexOf(tokens[2].toString())
+                                + msgKeyIdx;
                         // int msgStartIdx = cmdLine.indexOf(tokens[2].toString());
                         value = cmdLine.substring(msgStartIdx, cmdLine.length()).toString();
-                    } 
+                    }
 
                     // cases for if white space in msg not important
                     // for (int i = 2; i < tokens.length; i++) {
-                    //     msg.append(tokens[i]);
-                    //     if (i != tokens.length - 1) {
-                    //         msg.append(" ");
-                    //     }
+                    // msg.append(tokens[i]);
+                    // if (i != tokens.length - 1) {
+                    // msg.append(" ");
+                    // }
                     // }
                     try {
                         // kvStore.put(tokens[1].toString(), msg.toString());
@@ -154,12 +154,12 @@ public class KVClient implements IKVClient {
                         logger.info("kvclient Update database with Key: " + key + " and values:" + value);
                     } catch (Exception e) {
                         // e.getMessage();
-                        logger.error("kvclient put exception",e);
+                        logger.error("kvclient put exception", e);
                     }
                 } else {
                     printError("Not connected!");
                     // logger.error("kvclient not connected");
-                    
+
                 }
             } else {
                 printError("Error Missing value or key!");
@@ -183,7 +183,7 @@ public class KVClient implements IKVClient {
                     } catch (Exception e) {
                         // TODO: add logging to me
                         // e.getMessage();
-                        logger.error("kvclient get exception",e);
+                        logger.error("kvclient get exception", e);
                     }
                 } else {
                     printError("Not connected!");

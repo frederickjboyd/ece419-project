@@ -22,11 +22,7 @@ public class InteractionTest extends TestCase {
     }
 
     public void tearDown() {
-        System.out.println("tesar dwon start");
-
         kvClient.disconnect();
-        System.out.println("tesar dwon success");
-
     }
 
     @Test
@@ -40,10 +36,10 @@ public class InteractionTest extends TestCase {
             response = kvClient.put(key, value);
         } catch (Exception e) {
             ex = e;
+
         }
         System.out.println("test put success");
-        
-        assertTrue(ex == null && response.getStatus() == StatusType.PUT_SUCCESS);
+        assertTrue(ex == null && (response.getStatus() == StatusType.PUT_SUCCESS || response.getStatus() == StatusType.PUT_UPDATE));
     }
 
     @Test

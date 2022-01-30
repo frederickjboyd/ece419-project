@@ -1,6 +1,8 @@
 package shared.communication;
 
+import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
+import java.security.InvalidParameterException;
 
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
@@ -50,6 +52,7 @@ public class KVMessage implements IKVMessage {
         logger.debug("value: " + this.value);
 
         isMessageLengthValid(this.key, this.value);
+        isMessageASCII(this.key, this.value);
 
         DebugHelper.logFuncExit(logger);
     }
@@ -78,6 +81,7 @@ public class KVMessage implements IKVMessage {
         logger.debug("value: " + this.value);
 
         isMessageLengthValid(this.key, this.value);
+        isMessageASCII(this.key, this.value);
 
         try {
             String formattedString = this.statusType.toString() + SEP + key + SEP + value + SEP;
@@ -103,6 +107,7 @@ public class KVMessage implements IKVMessage {
         DebugHelper.logFuncEnter(logger);
 
         isMessageLengthValid(key, value);
+        isMessageASCII(key, value);
 
         try {
             String msgStr = statusType.toString() + SEP + key + SEP + value + SEP;
@@ -178,6 +183,27 @@ public class KVMessage implements IKVMessage {
         DebugHelper.logFuncExit(logger);
 
         return true;
+    }
+
+    private boolean isMessageASCII(String key, String value) {
+        boolean isASCII = true;
+        String errorMsg;
+
+        if (!Charset.forName("US-ASCII").newEncoder().canEncode(key)) {
+            isASCII = false;
+            errorMsg = String.format("Key %s contains non-ASCII characters.", key);
+            logger.error(errorMsg);
+            throw new InvalidParameterException(errorMsg);
+        }
+
+        if (!Charset.forName("US-ASCII").newEncoder().canEncode(value)) {
+            isASCII = false;
+            errorMsg = String.format("Value %s contains non-ASCII characters.", value);
+            logger.error(errorMsg);
+            throw new InvalidParameterException(errorMsg);
+        }
+
+        return isASCII;
     }
 
     /**

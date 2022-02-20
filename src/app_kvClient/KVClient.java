@@ -12,13 +12,9 @@ import logger.LogSetup;
 import client.KVStore;
 
 import logger.LogSetup;
-import java.io.BufferedReader;
-import java.io.InputStreamReader;
 
-import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
-import java.net.UnknownHostException;
 
 import java.net.Socket;
 import org.apache.log4j.Level;

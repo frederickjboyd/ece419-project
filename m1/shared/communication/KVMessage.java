@@ -4,7 +4,6 @@ import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.security.InvalidParameterException;
 
-import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 import shared.DebugHelper;
 

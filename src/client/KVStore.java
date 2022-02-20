@@ -10,7 +10,6 @@ import java.util.Set;
 
 import org.apache.log4j.Logger;
 
-import app_kvClient.ClientSocketListener;
 import shared.communication.IKVMessage;
 import shared.communication.KVCommunicationClient;
 import shared.communication.KVMessage;
@@ -40,7 +39,7 @@ public class KVStore {
         try {
             clientSocket = new Socket(this.address, this.port);
             kvCommunication = new KVCommunicationClient(clientSocket);
-            logger.info("Connection established! Server address = "+ this.address +",port = "+this.port);
+            logger.info("Connection established! Server address = " + this.address + ",port = " + this.port);
         } catch (NumberFormatException nfe) {
             logger.error("Unable to parse argument <port>", nfe);
             throw new NumberFormatException();

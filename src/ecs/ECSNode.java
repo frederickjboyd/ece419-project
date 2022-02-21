@@ -4,10 +4,7 @@ import org.apache.log4j.Logger;
 
 import java.math.BigInteger;
 
-import ecs.IECSNode;
-import ecs.IECSNode.NodeStatus;
-
-public class ECSNode implements IECSNode {
+public class ECSNode {
     private BigInteger ID; // MD5 hash of <ip>:<port>
     private String name; // Name of server provided in ECS config file
     private String host; // IP
@@ -19,6 +16,12 @@ public class ECSNode implements IECSNode {
     private static Logger logger = Logger.getRootLogger();
 
     private NodeStatus status;
+
+    public enum NodeStatus {
+        OFFLINE, // Node in ECS config, but not added
+        IDLE, // Node added, but not started
+        ONLINE // Node added and started
+    }
 
     public ECSNode(BigInteger ID, String name, String host, int port, BigInteger prevNodeID, BigInteger nextNodeID,
             BigInteger[] hashRange) {
@@ -54,21 +57,27 @@ public class ECSNode implements IECSNode {
         logger.debug(String.format("\tPort:\t\t%d", this.port));
     }
 
+    /**
+     * @return the name of the node (ie "Server 8.8.8.8")
+     */
     public String getNodeName() {
         return this.name;
     }
 
-    // @Override
     public BigInteger getNodeID() {
         return this.ID;
     }
 
-    // @Override
+    /**
+     * @return the hostname of the node (ie "8.8.8.8")
+     */
     public String getNodeHost() {
         return this.host;
     }
 
-    // @Override
+    /**
+     * @return the port number of the node (ie 8080)
+     */
     public int getNodePort() {
         return this.port;
     }
@@ -89,7 +98,10 @@ public class ECSNode implements IECSNode {
         this.nextNodeID = newNextNodeID;
     }
 
-    // @Override
+    /**
+     * @return array of two strings representing the low and high range of the
+     *         hashes that the given node is responsible for
+     */
     public BigInteger[] getNodeHashRange() {
         return this.hashRange;
     }

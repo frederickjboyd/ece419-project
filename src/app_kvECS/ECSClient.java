@@ -35,15 +35,10 @@ import shared.communication.AdminMessage.MessageType;
 import shared.DebugHelper;
 import shared.Metadata;
 
-// TODO: remove me
-// ECSClient: handle CLI input, communicate with zookeeper -> nodes
-// ConsistentHashRing: information about "ring" (e.g. where nodes are, calculate hash ranges, etc.)
-// ECSNode: store node-specific info (e.g. hash range, name, port, etc.)
-// AdminMessage: messages that get passed between ECS and KVServers for management
-// Metadata: wrapper for some info used in admin messages
-
 public class ECSClient implements IECSClient {
-    private static Logger logger = Logger.getRootLogger();
+    // Prevent external libraries from spamming console
+    private static Logger logger = Logger.getLogger(ECSClient.class);
+    private static Level logLevel = Level.TRACE;
 
     private boolean running = false;
     private static final String PROMPT = "ECS> ";
@@ -61,7 +56,10 @@ public class ECSClient implements IECSClient {
     private ZooKeeper zk;
 
     public ECSClient(String configPath) {
+        DebugHelper.logFuncEnter(logger);
+
         try {
+            logger.setLevel(logLevel);
             // Read configuration file
             BufferedReader reader = new BufferedReader(new FileReader(configPath));
             String l;
@@ -98,6 +96,7 @@ public class ECSClient implements IECSClient {
         }
 
         running = true;
+        DebugHelper.logFuncExit(logger);
     }
 
     private class ZooKeeperServer implements Runnable {
@@ -222,6 +221,8 @@ public class ECSClient implements IECSClient {
                     awaitNodes(count, ZK_TIMEOUT);
                 }
 
+                logger.trace(String.format("Setting data to node %s:", zkNodePath));
+                logger.trace(String.format("zk: %s", zk));
                 zk.setData(zkNodePath, msg.toBytes(), zk.exists(zkNodePath, false).getVersion());
             } catch (Exception e) {
                 logger.error("Unable to send admin message to node.");
@@ -236,6 +237,7 @@ public class ECSClient implements IECSClient {
 
     @Override
     public boolean awaitNodes(int count, int timeout) throws Exception {
+        DebugHelper.logFuncEnter(logger);
         boolean result = false;
         CountDownLatch latch = new CountDownLatch(timeout);
 
@@ -246,11 +248,13 @@ public class ECSClient implements IECSClient {
             e.printStackTrace();
         }
 
+        DebugHelper.logFuncExit(logger);
         return result;
     }
 
     @Override
     public boolean start() throws Exception {
+        DebugHelper.logFuncEnter(logger);
         AdminMessage msg = new AdminMessage(MessageType.START, null, null);
 
         for (String serverInfo : unavailableServers) {
@@ -271,11 +275,14 @@ public class ECSClient implements IECSClient {
             }
         }
 
+        DebugHelper.logFuncExit(logger);
+
         return true;
     }
 
     @Override
     public boolean stop() throws Exception {
+        DebugHelper.logFuncEnter(logger);
         AdminMessage msg = new AdminMessage(MessageType.STOP, null, null);
 
         for (String serverInfo : unavailableServers) {
@@ -291,11 +298,14 @@ public class ECSClient implements IECSClient {
             }
         }
 
+        DebugHelper.logFuncExit(logger);
+
         return true;
     }
 
     @Override
     public boolean shutdown() throws Exception {
+        DebugHelper.logFuncEnter(logger);
         AdminMessage msg = new AdminMessage(MessageType.SHUTDOWN, null, null);
 
         for (String serverInfo : unavailableServers) {
@@ -313,12 +323,15 @@ public class ECSClient implements IECSClient {
         }
 
         unavailableServers.clear();
+        DebugHelper.logFuncExit(logger);
 
         return true;
     }
 
     @Override
     public boolean removeNodes(Collection<String> nodeNames) {
+        DebugHelper.logFuncEnter(logger);
+
         for (String serverInfo : nodeNames) {
             try {
                 serverStatusInfo.put(serverInfo, NodeStatus.OFFLINE);
@@ -333,21 +346,28 @@ public class ECSClient implements IECSClient {
                 }
             } catch (Exception e) {
                 logger.error(String.format("Unable to remove server: %s", serverInfo));
+                e.printStackTrace();
                 return false;
             }
         }
+
+        DebugHelper.logFuncExit(logger);
 
         return false;
     }
 
     @Override
     public HashMap<BigInteger, ECSNode> getNodes() {
+        DebugHelper.logFuncEnter(logger);
+        DebugHelper.logFuncExit(logger);
         return hashRing.getHashRing();
     }
 
     @Override
     public ECSNode getNodeByKey(BigInteger key) {
+        DebugHelper.logFuncEnter(logger);
         HashMap<BigInteger, ECSNode> nodeMap = getNodes();
+        DebugHelper.logFuncExit(logger);
         return nodeMap.get(key);
     }
 
@@ -375,12 +395,15 @@ public class ECSClient implements IECSClient {
     }
 
     private boolean isServerCountValid(int count) {
+        DebugHelper.logFuncEnter(logger);
         boolean isValid = true;
 
         if (count < 0 || count > serverStatusInfo.size()) {
             isValid = false;
             logger.error(String.format("Invalid count specified: %d", count));
         }
+
+        DebugHelper.logFuncExit(logger);
 
         return isValid;
     }
@@ -452,8 +475,9 @@ public class ECSClient implements IECSClient {
                 removeNodes(serversToRemove);
                 break;
 
-            // TODO: implement displaying status
             case "status":
+                logger.info("Handling status...");
+                hashRing.printHashRingStatus();
                 break;
 
             case "logLevel":
@@ -482,7 +506,7 @@ public class ECSClient implements IECSClient {
                 break;
 
             default:
-                System.out.println("Error! Unknown command.");
+                System.out.println(String.format("Error! Unknown command: %s", cmdLine));
                 printHelp();
                 break;
         }
@@ -593,9 +617,10 @@ public class ECSClient implements IECSClient {
     }
 
     public static void main(String[] args) {
-        System.out.println("Hello, I am the ESCClient!");
         try {
-            new LogSetup("logs/ecs.log", Level.INFO);
+            // Leave this off unless you want to view external library logs (e.g. ZooKeeper)
+            new LogSetup("logs/ecs.log", Level.OFF);
+
             if (args.length != 1) {
                 System.out.println("Error! Please specify a configuration file!");
             } else {

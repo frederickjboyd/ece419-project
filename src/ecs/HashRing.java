@@ -11,6 +11,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 public class HashRing {
@@ -33,6 +34,7 @@ public class HashRing {
         int hashRingSize = serverInfo.size();
         List<ECSNode> nodesAdded = new ArrayList<ECSNode>();
 
+        // Add each node to hash ring
         for (int i = 0; i < hashRingSize; i++) {
             String info = serverInfo.get(i);
             ECSNode node = createECSNode(info);
@@ -42,6 +44,7 @@ public class HashRing {
 
         List<BigInteger> nodeIDsList = getSortedNodeIDs();
 
+        // Calculate hash range for each node
         for (int i = 0; i < hashRingSize; i++) {
             setNodeHashRange(i, nodeIDsList, hashRingSize);
         }
@@ -94,18 +97,18 @@ public class HashRing {
         int hashRingSize = getHashRingSize();
         int newNodeIdx = -1;
 
-        // TODO: not sure if this logic makes sense
-        // Wouldn't any node be inserted immediately (has to be < or >)
         for (int i = 0; i < hashRingSize; i++) {
             BigInteger currNodeID = nodeIDsList.get(i);
             int isNewNodeIDLarger = newNodeID.compareTo(currNodeID);
 
             if (isNewNodeIDLarger == -1) {
+                // newNodeID < currNodeID;
                 newNodeIdx = i;
+                nodeIDsList.add(newNodeIdx, newNodeID);
                 break;
             } else if (isNewNodeIDLarger == 1) {
-                newNodeIdx = i;
-                break;
+                // newNodeID > currNodeID;
+                continue;
             } else {
                 logger.error(String.format("Found two nodes with the same ID: %d, %d", newNodeID, currNodeID));
                 break;
@@ -134,22 +137,25 @@ public class HashRing {
     }
 
     public void removeNode(String serverInfo) {
+        DebugHelper.logFuncEnter(logger);
         String[] serverInfoArray = serverInfo.split(":");
         String host = serverInfoArray[1];
         int port = Integer.parseInt(serverInfoArray[2]);
+
         String infoToHash = createStringToHash(host, port);
         BigInteger nodeID = hashServerInfo(infoToHash);
         ECSNode node = hashRing.get(nodeID);
         removeNode(node);
+        DebugHelper.logFuncExit(logger);
     }
 
     public void removeNode(ECSNode node) {
         DebugHelper.logFuncEnter(logger);
-
         ECSNode prevNode = hashRing.get(node.getPrevNodeID());
         BigInteger prevNodeID = node.getPrevNodeID();
         ECSNode nextNode = hashRing.get(node.getNextNodeID());
         BigInteger nextNodeID = node.getNextNodeID();
+
         prevNode.setNextNodeID(nextNodeID);
         nextNode.setPrevNodeID(prevNodeID);
         hashRing.remove(node.getNodeID());
@@ -184,14 +190,17 @@ public class HashRing {
      * @return Sorted list of node IDs.
      */
     private List<BigInteger> getSortedNodeIDs() {
+        DebugHelper.logFuncEnter(logger);
         Set<BigInteger> nodeIDsSet = this.hashRing.keySet();
         List<BigInteger> nodeIDsList = new ArrayList<BigInteger>(nodeIDsSet);
         Collections.sort(nodeIDsList);
+        DebugHelper.logFuncExit(logger);
 
         return nodeIDsList;
     }
 
     public HashMap<String, Metadata> getAllMetadata() {
+        DebugHelper.logFuncEnter(logger);
         HashMap<String, Metadata> allMetadata = new HashMap<String, Metadata>();
 
         for (BigInteger serverID : hashRing.keySet()) {
@@ -205,6 +214,8 @@ public class HashRing {
             allMetadata.put(name, nodeMetadata);
         }
 
+        DebugHelper.logFuncExit(logger);
+
         return allMetadata;
     }
 
@@ -214,5 +225,31 @@ public class HashRing {
 
     public HashMap<BigInteger, ECSNode> getHashRing() {
         return this.hashRing;
+    }
+
+    public void printHashRingStatus() {
+        DebugHelper.logFuncEnter(logger);
+        final String FANCY_TEXT = "=======================================";
+        System.out.println(FANCY_TEXT);
+
+        for (Map.Entry<BigInteger, ECSNode> set : hashRing.entrySet()) {
+            BigInteger nodeID = set.getKey();
+            ECSNode node = set.getValue();
+
+            System.out.println(String.format("ID: %d", node.getNodeID()));
+            System.out.println(String.format("Name: %s", node.getNodeName()));
+            System.out.println(String.format("Host: %s", node.getNodeHost()));
+            System.out.println(String.format("Port: %d", node.getNodePort()));
+            BigInteger prevNodeID = node.getPrevNodeID();
+            String prevNodeName = hashRing.get(prevNodeID).getNodeName();
+            System.out.println(String.format("prevNode: %s, %d", prevNodeName, prevNodeID));
+            BigInteger nextNodeID = node.getNextNodeID();
+            String nextNodeName = hashRing.get(nextNodeID).getNodeName();
+            System.out.println(String.format("nextNode: %s, %d", nextNodeName, nextNodeID));
+            System.out.println();
+        }
+
+        System.out.println(FANCY_TEXT);
+        DebugHelper.logFuncExit(logger);
     }
 }

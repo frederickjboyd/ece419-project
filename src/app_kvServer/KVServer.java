@@ -26,11 +26,11 @@ import java.math.BigInteger;
 // For synchronization
 import java.util.concurrent.CountDownLatch;
 // TODO
-import shared.messages.KVAdminMessage;
-import shared.messages.KVMessage;
-import shared.messages.Metadata;
+import shared.communication.AdminMessage;
+import shared.communication.KVMessage;
+import shared.Metadata;
 // Admin message type enum 
-import shared.messages.KVAdminMessage.KVAdminType;
+import shared.communication.AdminMessage.MessageType;
 
 
 
@@ -372,15 +372,19 @@ public class KVServer implements IKVServer, Runnable {
     }
 
 
-    // Milestone 2 Modifications
+    // ********************** Milestone 2 Modifications **********************
 
-    // Helper function to get current status of the server
+    /**
+     *  Helper function to get current status of the server
+     */
     @Override
     public ServerStatus getStatus(){
         return status;
     }
 
-    // Helper function to get current status of the lock
+    /**
+     *  Helper function to get current status of the lock
+     */
     @Override
     public boolean getLock(){
         return locked;
@@ -418,31 +422,35 @@ public class KVServer implements IKVServer, Runnable {
     
     /**
      * Update metadata, move entries as required
-     * @param adminMessageString
+     * @param adminMessageString Admin message string from communications
      */
     @Override
     public void update(String adminMessageString){
-        // TODO
-        KVAdminMessage incomingMessage = new KVAdminMessage(adminMessageString);
-        // TODO - check that getMessageTypeString is available
-        String incomingMessageType = incomingMessage.getMessageTypeString()
-        this.allMetadata = incomingMessage.getMessageMetadata();
+        // Process incoming admin message
+        AdminMessage incomingMessage = new AdminMessage(adminMessageString);
 
-        for (String key: allMetadata.keySet()){
-			Metadata metadata = allMetadata.get(key);
-		}
+        // TODO - check that getMsgTypeString is available
+        // String incomingMessageType = incomingMessage.getMsgTypeString()
+        // Update metadata map
+        this.allMetadata = incomingMessage.getMsgMetadata();
 
+        // for (String key: allMetadata.keySet()){
+		// 	Metadata metadata = allMetadata.get(key);
+		// }
+
+        // Update local metadata for this server
 		this.localMetadata = allMetadata.get(hashedName);
-        BigInteger begin = localMetadata.start;
-        BigInteger end = localMetadata.stop;
+
+        // ************ Move data to correct server ************
+        BigInteger begin = localMetadata.hashStart;
+        BigInteger end = localMetadata.hashStop;
 
         // Acquire write lock
         lockWrite();
 
-        // TODO
-        // Get unreachable entries based on given hash range
+        // Get unreachable entries based on current hash range
 		Map<String, String> unreachableEntries = storage.hashUnreachable(begin, end);
-		// Iterate through unreachable map 
+		// Iterate through unreachable entries 
         Iterator itr = unreachableEntries.entrySet().iterator();
 
 		while (itr.hasNext()) {
@@ -453,15 +461,18 @@ public class KVServer implements IKVServer, Runnable {
                 storage.delete(key);
             }
 			else {
-                logger.error("Failed to remove KV pair from disk - reachable conflict!")
+                logger.error("Failed to remove unreachable KV pair from disk - reachable conflict!")
 			}
 		}
 
+        // Get metadata of destination server
 		Metadata transferServerMetadata = allMetadata.get(end.toString());
-		String transferServerName = zooPathRoot + "/" + transferServerMetadata.serverAddress + ":" + transferServerMetadata.port;
+        // Build destination server name
+		String transferServerName = zooPathRoot + "/" + transferServerMetadata.host + ":" + transferServerMetadata.port;
 		try {
-            // TODO - Need to confirm enums in KVAdminType, if MOVE_DATA available
-			sendMessage(KVAdminType.MOVEDATA, null, unreachableEntries, transferServerName);
+            // Send admin message to destination
+            // Need to confirm enums in MessageType, if TRANSFER_DATA available
+			sendMessage(MessageType.TRANSFER_DATA, null, unreachableEntries, transferServerName);
 		}
         catch (InterruptedException | KeeperException e){
             logger.error("Failed to send admin message with unreachable entries: ",e);
@@ -472,60 +483,68 @@ public class KVServer implements IKVServer, Runnable {
 
 
     /**
-     * Receive data and store into persistent storage
-     * @param adminMessageString
+     * Receive new KV Pairs and store into persistent storage
+     * @param adminMessageString Incoming admin message string
      */
     @Override
-    public void transferData(String adminMessageString){
-        // TODO
+    public void processDataTransfer(String adminMessageString){
+        // Process incoming admin message string
+		AdminMessage incomingMessage = new AdminMessage(adminMessageString);
+		// MessageType incomingMessageType = incomingMessage.getMsgType();
 
-        // Create KVAdminMessage from input string
-		KVAdminMessage recvMsg = new KVAdminMessage(adminMessageString);
-		KVAdminType recvMsgType = recvMsg.getMessageType();
-		// Verify message type is TRANSFER_KV KV data
-		if (recvMsgType != KVAdminType.MOVEDATA){
-			logger.error("Unhandled case: KVAdminMessage type mismatch");
-			return;
-		}
-		// Entering critical region and acquire write lock
-		lockWrite();
-		// Get KV pairs data and store into disk
-		Map<String, String> recvMsgKvData = recvMsg.getMessageKVData();
-		Iterator<Map.Entry<String, String>> it = recvMsgKvData.entrySet().iterator();
-		while (it.hasNext()) {
-			Map.Entry<String, String> kvPair = it.next();
-
+        // Acquire write lock
+        lockWrite();
+        Map<String, String> incomingData = incomingMessage.getMsgKeyValue();
+        Iterator<Map.Entry<String, String>> itr = incomingData.entrySet().iterator();
+        // Loop through KV entries in incoming data
+        while (itr.hasNext()) {
+            Map.Entry<String, String> entry = itr.next();
             // TODO - Check this logic
-			if (kvPair.getValue().toString().equals("")){
-				storage.delete(kvPair.getKey());
-			}
-			else {
-				storage.put(kvPair.getKey().toString(), kvPair.getValue().toString());
-			}
-		}
-		// Leaving critical region and releasing write lock
-		unLockWrite();
+            if (entry.getValue().toString().equals("")){
+                storage.delete(entry.getKey());
+            }
+            // Write new entries to disk
+            else {
+                storage.put(entry.getKey().toString(), entry.getValue().toString());
+            }
+        }
+        // Release write lock
+        unLockWrite();
     }
 
 
-    // TODO
-	public void sendMessage(KVAdminType type, Map<String, Metadata> metadata, Map<String, String> data, String destination) throws KeeperException, InterruptedException{
-		KVAdminMessage toSend = new KVAdminMessage(type, metadata, data);
+    /**
+     * Send new admin message to destination servers
+     * @param type Message type
+     * @param metadata Metadata map to be sent
+     * @param data New KV entries to be transfered
+     * @param destination Name of destination server (full name: (root/host/port))
+     * @throws KeeperException
+     * @throws InterruptedException
+     */
+	public void sendMessage(MessageType type, Map<String, Metadata> metadata, Map<String, String> data, String destination) throws KeeperException, InterruptedException{
+		AdminMessage toSend = new AdminMessage(type, metadata, data);
 		zoo.setData(destination, toSend.toBytes(), zoo.exists(destination, false).getVersion());
 	}
 
 
-    // TODO   
+    /**
+     * Return local metadata variable
+     */
 	@Override
 	public Metadata getLocalMetadata(){
 		return localMetadata;
 	}
 
-    // TODO
+
+    /**
+     * Return global metadata map
+     */
     @Override
 	public Map<String, Metadata> getAllMetadata(){
 		return allMetadata;
 	}
+
 
     /**
      * Helper function for handling incoming admin message (route to appropriate case)
@@ -540,31 +559,36 @@ public class KVServer implements IKVServer, Runnable {
         }
         else{
             // TODO
-            KVAdminMessage incomingMessage = new KVAdminMessage(adminMessageString);
-            KVAdminType incomingMessageType = incomingMessage.getMessageType()
+            AdminMessage incomingMessage = new AdminMessage(adminMessageString);
+            MessageType incomingMessageType = incomingMessage.getMsgType()
 
-            if (incomingMessageType == KVAdminType.INIT){
+            // TODO - may need to block incoming requests, check this!
+            if (incomingMessageType == MessageType.INIT){
                 update(adminMessageString);
             }
-            else if (incomingMessageType == KVAdminType.START){
+            else if (incomingMessageType == MessageType.START){
                 start();
             }
-            else if (incomingMessageType == KVAdminType.STOP){
+            else if (incomingMessageType == MessageType.STOP){
                 stop();
             }
-            else if (incomingMessageType == KVAdminType.SHUTDOWN){
+            else if (incomingMessageType == MessageType.SHUTDOWN){
                 shutDown();
             }
-            else if (incomingMessageType == KVAdminType.LOCKWRITE){
-                lockWrite();
+
+            // else if (incomingMessageType == MessageType.LOCKWRITE){
+            //     lockWrite();
+            // }
+            // else if (incomingMessageType == MessageType.UNLOCKWRITE){
+            //     unLockWrite();
+            // }
+
+            // Incoming data transfer from another server
+            else if (incomingMessageType == MessageType.TRANSFER_DATA){
+                processDataTransfer();
             }
-            else if (incomingMessageType == KVAdminType.UNLOCKWRITE){
-                unLockWrite();
-            }
-            else if (incomingMessageType == KVAdminType.MOVEDATA){
-                transferData();
-            }
-            else if (incomingMessageType == KVAdminType.UPDATE){
+            // Update metadata repository for this server, shift entries if needed
+            else if (incomingMessageType == MessageType.UPDATE){
                 update(adminMessageString);
             }
         }

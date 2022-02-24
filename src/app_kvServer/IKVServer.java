@@ -106,8 +106,18 @@ public interface IKVServer {
 
 
 
-    // Milestone 2 Commands
+    // ********** Milestone 2 Commands **********
+
+    /**
+     * Get server status 
+     * @return START, STOP, SHUTDOWN
+     */
     public ServerStatus getStatus();
+
+    /**
+     * Get write lock status 
+     * @return True if locked, False if unlocked
+     */
     public boolean getLock();
 
     public void start();
@@ -120,9 +130,15 @@ public interface IKVServer {
 
     public void unLockWrite();
 
+    /**
+     * Update server metadata, shift entries as required
+     */
     public void update()
 
-    public void transferData()
+    /**
+     * Process incoming data transfer
+     */
+    public void processDataTransfer()
 
     public Metadata getLocalMetadata();
 

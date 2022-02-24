@@ -9,6 +9,8 @@ import java.net.Socket;
 import java.net.UnknownHostException;
 import java.text.NumberFormat;
 import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.Iterator;
 
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
@@ -155,14 +157,14 @@ public class KVServer implements IKVServer, Runnable {
         try{
             // Latch to wait for completed action
             final CountDownLatch syncLatch = new CountDownLatch(1);
-            this.zk = new ZooKeeper(zooHost + ":" + zooPort, 5000, new Watcher(){
+            this.zoo = new ZooKeeper(zooHost + ":" + zooPort, 5000, new Watcher(){
                 public void process(WatchedEvent we){
                     if (we.getState() == KeeperState.SyncConnected){
                         // Countdown latch if we succesfully connected
                        syncLatch.countDown();
                     }
                 }
-            }
+            });
             // Blocks until current count reaches zero
             syncLatch.await();
         }

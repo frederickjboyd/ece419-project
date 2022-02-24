@@ -8,6 +8,15 @@ public interface IKVServer {
         FIFO
     };
 
+    // For Milestone 2 - status of KVServer
+    public enum ServerStatus {
+        START, // Starts the KVServer, all client requests and all ECS requests are processed.
+        STOP, // Stops the KVServer, all client requests are rejected and only ECS requests are processed.
+        SHUTDOWN // Exits the KVServer application.
+    }
+
+    // Milestone 1 Commands
+
     /**
      * Get the port number of the server
      * 
@@ -94,4 +103,28 @@ public interface IKVServer {
      * Gracefully stop the server, can perform any additional actions
      */
     public void close();
+
+
+
+    // Milestone 2 Commands
+    public ServerStatus getStatus();
+    public boolean getLock();
+
+    public void start();
+
+    public void stop();
+
+    public void shutDown();
+
+    public void lockWrite();
+
+    public void unLockWrite();
+
+    public void update()
+
+    public void transferData()
+
+    public Metadata getLocalMetadata();
+
+    public Map<String, Metadata> getAllMetadata();
 }

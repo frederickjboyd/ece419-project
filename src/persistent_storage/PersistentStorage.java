@@ -10,6 +10,10 @@ import persistent_storage.IPersistentStorage;
 import org.apache.log4j.Logger;
 import java.io.IOException;
 
+// For MD5 hashing
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
+
 public class PersistentStorage implements IPersistentStorage {
 
     // Initialize logger
@@ -49,14 +53,15 @@ public class PersistentStorage implements IPersistentStorage {
                     logger.info("Existing storage file found!");
                 }
             } catch (IOException e) {
-                logger.error("Failed to start new storage file", e);
+                logger.error("Failed to begin new storage file", e);
             }
         }
     }
 
     // NOTE: Java does not have optional arguments - overload instead
     /**Build a map - no database existing on file.*/
-    public PersistentStorage() {
+    public PersistentStorage(String serverName) {
+        this.databaseName = serverName + "." + "database.properties";
         init();
         Map<String, String> tempMap = new HashMap<String, String>();
         // Activate blank synchronized map
@@ -67,8 +72,8 @@ public class PersistentStorage implements IPersistentStorage {
      * Load existing map from storage.
      * @param databaseName global database name
      */
-    public PersistentStorage(String databaseName) {
-        this.databaseName = databaseName;
+    public PersistentStorage(String serverName, String fileName) {
+        this.databaseName = serverName + "." + fileName;
         // Check for directory/prop file present
         init();
 
@@ -230,4 +235,81 @@ public class PersistentStorage implements IPersistentStorage {
             logger.error("Failed to wipe map!", e);
         }
     }
+
+
+    /**Milestone 2 Modifications*/
+
+    /**
+     * Get MD5 hash
+     * @param key String to be hashed in MD5
+     * @return Returns big integer MD5 hash
+     */
+	public BigInteger MD5Hash (String key) {
+		MessageDigest md = null;
+        byte[] bytesOfMessage = key.getBytes("UTF-8");
+        try {
+			md = MessageDigest.getInstance("MD5");
+		} catch (NoSuchAlgorithmException e) {
+			logger.error("Error in generating MD5 hash!");
+		}
+        byte[] MD5digest = md.digest(bytesOfMessage);
+        BigInteger big_md5 = new BigInteger(1, MD5digest);
+		return big_md5; 
+	}
+ 
+
+    /**
+     * Check if supplied hash is reachable within begin/end bounds 
+     * @param begin Beginning of valid range
+     * @param end End of valid range
+     * @param key Key to be checked
+     * @return True if in range, False if out of range
+     */
+    public boolean hashReachable (BigInteger begin, BigInteger end, BigInteger key){
+        // Case 1: Begin <= End, key > begin, key < end
+        // Case 2: Begin >= End, key < begin, key < end
+        // Case 3: Begin >= End, key > begin, key > end
+        if ((begin.compareTo(end) !=  1) && (key.compareTo(begin) ==  1) && (key.compareTo(end) == -1) ||
+            (begin.compareTo(end) != -1) && (key.compareTo(begin) == -1) && (key.compareTo(end) == -1) ||
+            (begin.compareTo(end) != -1) && (key.compareTo(begin) ==  1) && (key.compareTo(end) ==  1))
+            {
+                return true;
+            }
+        else{
+            return false;
+        }
+    }
+
+
+    /**
+     * Grab KV Pairs from current server db and check if in valid range. 
+     * If unreachable, return in new table.
+     * @param begin Beginning of valid range
+     * @param end End of valid range
+     * @return
+     */
+    public Map<String, String> hashUnreachable(BigInteger begin, BigInteger end){
+        // Load local map with existing entries in storage
+        Map<String, String> tempMap = new HashMap<String, String>();
+        Properties properties = new Properties();
+        try {
+            properties.load(new FileInputStream(this.directory + '/' + this.databaseName));
+            for (String key : properties.stringPropertyNames()) {
+                tempMap.put(key, properties.get(key).toString());
+            }
+        } catch (IOException e) {
+            logger.error("Failed to load existing properties file!", e);
+        }
+        // Activate synchronized map
+        Map<String, String> currentTable = Collections.synchronizedMap(tempMap);
+        Map<String, String> newTable = new HashMap<String, String>();
+        // If key is unreachable in current range, add to new table
+        for (Map.Entry keyValPair : currentTable.entrySet()) { 
+            String key = (String)keyValPair.getKey(); 
+            if (hashReachable(begin, end, MD5Hash(key) == false)){
+                newTable.put(key, (String)keyValPair.getValue());
+            }
+        }
+        return newTable;
+	}
 }

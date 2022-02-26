@@ -1,14 +1,14 @@
 package persistent_storage;
 
 import java.io.*;
-import java.nio.channels.FileChannel;
 import java.util.*;
-import java.util.List;
-import java.util.ArrayList;
-import persistent_storage.IPersistentStorage;
+import java.math.BigInteger;
 
 import org.apache.log4j.Logger;
 import java.io.IOException;
+
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 
 public class PersistentStorage implements IPersistentStorage {
 
@@ -22,7 +22,8 @@ public class PersistentStorage implements IPersistentStorage {
     private String databaseName = "database.properties";
     private File testFile;
 
-    /**Initializes the database properties file.
+    /**
+     * Initializes the database properties file.
      * Check if directory exists - if not, create it.
      * Check if data.properties file exists - if not, create it.
      */
@@ -49,14 +50,15 @@ public class PersistentStorage implements IPersistentStorage {
                     logger.info("Existing storage file found!");
                 }
             } catch (IOException e) {
-                logger.error("Failed to start new storage file", e);
+                logger.error("Failed to begin new storage file", e);
             }
         }
     }
 
     // NOTE: Java does not have optional arguments - overload instead
-    /**Build a map - no database existing on file.*/
-    public PersistentStorage() {
+    /** Build a map - no database existing on file. */
+    public PersistentStorage(String serverName) {
+        this.databaseName = serverName + "." + "database.properties";
         init();
         Map<String, String> tempMap = new HashMap<String, String>();
         // Activate blank synchronized map
@@ -65,10 +67,11 @@ public class PersistentStorage implements IPersistentStorage {
 
     /**
      * Load existing map from storage.
+     * 
      * @param databaseName global database name
      */
-    public PersistentStorage(String databaseName) {
-        this.databaseName = databaseName;
+    public PersistentStorage(String serverName, String fileName) {
+        this.databaseName = serverName + "." + fileName;
         // Check for directory/prop file present
         init();
 
@@ -106,7 +109,7 @@ public class PersistentStorage implements IPersistentStorage {
     // ldapContent.put(key, properties.get(key).toString());
     // }
 
-    /**Write the current map to disk */
+    /** Write the current map to disk */
     private synchronized void writeMap() {
         Properties properties = new Properties();
         // Loop through entries in current map
@@ -117,7 +120,7 @@ public class PersistentStorage implements IPersistentStorage {
         // Debug delete
         // System.out.println("***Show hash map right before writing");
         // for (Map.Entry<String, String> entry : this.referenceMap.entrySet()) {
-        //     System.out.println(entry.getKey() + ":" + entry.getValue());
+        // System.out.println(entry.getKey() + ":" + entry.getValue());
         // }
 
         // Try write to disk
@@ -128,9 +131,10 @@ public class PersistentStorage implements IPersistentStorage {
         }
     }
 
-
-    /** Put new key-val pair into local map, then call write to disk
-     * @param key Key to put entry under 
+    /**
+     * Put new key-val pair into local map, then call write to disk
+     * 
+     * @param key   Key to put entry under
      * @param value Value to store under the given key
      */
     @Override
@@ -146,7 +150,9 @@ public class PersistentStorage implements IPersistentStorage {
         }
     }
 
-    /** Get a value given a key
+    /**
+     * Get a value given a key
+     * 
      * @param key Search for value under this key
      */
     @Override
@@ -166,7 +172,9 @@ public class PersistentStorage implements IPersistentStorage {
         }
     }
 
-    /** Delete the given key and its entry from the map, then write to disk
+    /**
+     * Delete the given key and its entry from the map, then write to disk
+     * 
      * @param key Key to delete
      */
     @Override
@@ -182,12 +190,12 @@ public class PersistentStorage implements IPersistentStorage {
             // for (Map.Entry<String, String> entry : this.referenceMap.entrySet()) {
             // System.out.println(entry.getKey() + ":" + entry.getValue());
             // }
-            
+
             // Tried to delete something that doesn't have entries
             if (value == null) {
                 logger.info("Failed to delete key: " + key + " as no values exist");
                 return false;
-            } 
+            }
             // Delete was succesful, write to disk
             else {
                 writeMap();
@@ -200,7 +208,9 @@ public class PersistentStorage implements IPersistentStorage {
         }
     }
 
-    /** Check if key exists in our map, return true if found, false if not.
+    /**
+     * Check if key exists in our map, return true if found, false if not.
+     * 
      * @param key Key to search for
      */
     @Override
@@ -229,5 +239,85 @@ public class PersistentStorage implements IPersistentStorage {
         } catch (Exception e) {
             logger.error("Failed to wipe map!", e);
         }
+    }
+
+    /** Milestone 2 Modifications */
+
+    /**
+     * Get MD5 hash
+     * 
+     * @param key String to be hashed in MD5
+     * @return Returns big integer MD5 hash
+     */
+    public BigInteger MD5Hash(String key) {
+        MessageDigest md = null;
+        byte[] bytesOfMessage = null;
+
+        try {
+            bytesOfMessage = key.getBytes("UTF-8");
+            md = MessageDigest.getInstance("MD5");
+        } catch (NoSuchAlgorithmException e) {
+            logger.error("Error in generating MD5 hash!");
+        } catch (UnsupportedEncodingException e) {
+            logger.error("Unsupported encoding exception!");
+        }
+
+        byte[] MD5digest = md.digest(bytesOfMessage);
+        BigInteger big_md5 = new BigInteger(1, MD5digest);
+        return big_md5;
+    }
+
+    /**
+     * Check if supplied hash is reachable within begin/end bounds
+     * 
+     * @param begin Beginning of valid range
+     * @param end   End of valid range
+     * @param key   Key to be checked
+     * @return True if in range, False if out of range
+     */
+    public boolean hashReachable(BigInteger begin, BigInteger end, BigInteger key) {
+        // Case 1: Begin <= End, key > begin, key < end
+        // Case 2: Begin >= End, key < begin, key < end
+        // Case 3: Begin >= End, key > begin, key > end
+        if ((begin.compareTo(end) != 1) && (key.compareTo(begin) == 1) && (key.compareTo(end) == -1) ||
+                (begin.compareTo(end) != -1) && (key.compareTo(begin) == -1) && (key.compareTo(end) == -1) ||
+                (begin.compareTo(end) != -1) && (key.compareTo(begin) == 1) && (key.compareTo(end) == 1)) {
+            return true;
+        } else {
+            return false;
+        }
+    }
+
+    /**
+     * Grab KV Pairs from current server db and check if in valid range.
+     * If unreachable, return in new table.
+     * 
+     * @param begin Beginning of valid range
+     * @param end   End of valid range
+     * @return
+     */
+    public Map<String, String> hashUnreachable(BigInteger begin, BigInteger end) {
+        // Load local map with existing entries in storage
+        Map<String, String> tempMap = new HashMap<String, String>();
+        Properties properties = new Properties();
+        try {
+            properties.load(new FileInputStream(this.directory + '/' + this.databaseName));
+            for (String key : properties.stringPropertyNames()) {
+                tempMap.put(key, properties.get(key).toString());
+            }
+        } catch (IOException e) {
+            logger.error("Failed to load existing properties file!", e);
+        }
+        // Activate synchronized map
+        Map<String, String> currentTable = Collections.synchronizedMap(tempMap);
+        Map<String, String> newTable = new HashMap<String, String>();
+        // If key is unreachable in current range, add to new table
+        for (Map.Entry keyValPair : currentTable.entrySet()) {
+            String key = (String) keyValPair.getKey();
+            if (hashReachable(begin, end, MD5Hash(key)) == false) {
+                newTable.put(key, (String) keyValPair.getValue());
+            }
+        }
+        return newTable;
     }
 }

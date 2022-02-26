@@ -12,13 +12,9 @@ import logger.LogSetup;
 import client.KVStore;
 
 import logger.LogSetup;
-import java.io.BufferedReader;
-import java.io.InputStreamReader;
 
-import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
-import java.net.UnknownHostException;
 
 import java.net.Socket;
 import org.apache.log4j.Level;
@@ -93,12 +89,6 @@ public class KVClient implements IKVClient {
                 try {
                     serverAddress = tokens[1];
                     serverPort = Integer.parseInt(tokens[2]);
-                    // try {
-                    // newConnection(serverAddress, serverPort);
-                    // } catch (Exception e) {
-                    // // TODO: add logging to me!
-                    // e.getMessage();
-                    // }
                     newConnection(serverAddress, serverPort);
 
                 } catch (NumberFormatException nfe) {
@@ -125,7 +115,6 @@ public class KVClient implements IKVClient {
                     System.out.println("Inside put if statement!");
 
                     // Find the start of the message then transfer everything over
-                    // StringBuilder msg = new StringBuilder();
                     String key = tokens[1].toString();
                     String value = "";
 
@@ -141,13 +130,6 @@ public class KVClient implements IKVClient {
                         value = cmdLine.substring(msgStartIdx, cmdLine.length()).toString();
                     }
 
-                    // cases for if white space in msg not important
-                    // for (int i = 2; i < tokens.length; i++) {
-                    // msg.append(tokens[i]);
-                    // if (i != tokens.length - 1) {
-                    // msg.append(" ");
-                    // }
-                    // }
                     try {
                         // kvStore.put(tokens[1].toString(), msg.toString());
                         kvStore.put(key, value);
@@ -181,8 +163,6 @@ public class KVClient implements IKVClient {
                         kvStore.get(tokens[1]);
                         logger.info("kvclient GET: retrieve Key: " + tokens[1] + " from server");
                     } catch (Exception e) {
-                        // TODO: add logging to me
-                        // e.getMessage();
                         logger.error("kvclient get exception", e);
                     }
                 } else {

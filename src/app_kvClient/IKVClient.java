@@ -1,8 +1,5 @@
 package app_kvClient;
 
-import java.io.IOException;
-import java.net.UnknownHostException;
-
 import client.KVStore;
 
 public interface IKVClient {

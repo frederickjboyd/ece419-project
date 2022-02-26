@@ -16,6 +16,7 @@ public interface IKVMessage {
         DELETE_SUCCESS, // Delete - request successful
         DELETE_ERROR, // Delete - request successful
         DISCONNECT, // Request to disconnect
+        SERVER_NOT_RESPONSIBLE, // if the server didn't respond
     }
 
 }

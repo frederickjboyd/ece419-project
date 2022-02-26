@@ -9,6 +9,11 @@ import org.apache.log4j.Logger;
 import shared.DebugHelper;
 
 import shared.communication.IKVMessage;
+import shared.Metadata;
+import shared.communication.AdminMessage;
+import java.util.ArrayList;
+import java.util.List;
+
 
 public class KVMessage implements IKVMessage {
     private static Logger logger = Logger.getRootLogger();
@@ -235,5 +240,27 @@ public class KVMessage implements IKVMessage {
      */
     public StatusType getStatus() {
         return this.statusType;
+    }
+
+    public List<Metadata> updateMetadata() {
+        // placeholder atm
+        // Need to move to somewhere where the metadata string exists 
+        if (this.statusType != "SERVER_NOT_RESPONSIBLE") {
+            errorMsg = String.format("status SERVER_NOT_RESPONSIBLE");
+            logger.error(errorMsg);
+            return null;
+        }
+
+        // call sth like metadataHashmap = getMetaData() associated with server and will get hashmap metadataMap
+        ArrayList<Metadata> metadata_list = new ArrayList<>();
+
+        metadataHashmap = AdminMessage.getMsgMetadata(); // NEED TO CHECK STILLLL
+
+        for (Object value : metadataHashmap.values()) {
+            Metadata temp = value;
+            metadata_list.add(temp);
+        }
+        return metadata_list;
+    }
     }
 }

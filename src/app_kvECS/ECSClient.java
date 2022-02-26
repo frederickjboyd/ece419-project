@@ -502,6 +502,7 @@ public class ECSClient implements IECSClient {
             case "quit":
                 logger.info("Handling quit...");
                 shutdown();
+                zk.close();
                 running = false;
                 break;
 

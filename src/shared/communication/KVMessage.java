@@ -6,9 +6,16 @@ import java.security.InvalidParameterException;
 
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
+import org.json.JSONObject;
 import shared.DebugHelper;
 
 import shared.communication.IKVMessage;
+import shared.Metadata;
+import shared.communication.AdminMessage;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import java.util.Iterator;
 
 public class KVMessage implements IKVMessage {
     private static Logger logger = Logger.getRootLogger();
@@ -235,5 +242,42 @@ public class KVMessage implements IKVMessage {
      */
     public StatusType getStatus() {
         return this.statusType;
+    }
+
+    public List<Metadata> updateMetadata() {
+        // placeholder atm
+        // Need to move to somewhere where the metadata string exists
+        if (this.statusType != StatusType.SERVER_NOT_RESPONSIBLE) {
+            String errorMsg = String.format("status SERVER_NOT_RESPONSIBLE");
+            logger.error(errorMsg);
+            return null;
+        }
+
+        // call sth like metadataHashmap = getMetaData() associated with server and will
+        // get hashmap metadataMap
+        // ArrayList<Metadata> metadata_list = new ArrayList<>();
+
+        // Map<String, Metadata> metadataHashmap = AdminMessage.getMsgMetadata(); //
+        // NEED TO CHECK STILLLL
+
+        // for (Metadata value : metadataHashmap.values()) {
+        // Metadata temp = value;
+        // metadata_list.add(temp);
+        // }
+        // return metadata_list;
+
+        JSONObject metadata_jo = new JSONObject(value);
+        ArrayList<Metadata> metadata_list = new ArrayList<>();
+        Iterator<String> keys = metadata_jo.keys();
+
+        while (keys.hasNext()) {
+            String key = keys.next();
+            JSONObject obj = (JSONObject) metadata_jo.get(key);
+            Metadata temp = new Metadata(obj.getString("host"), obj.getInt("port"),
+                    obj.getBigInteger("hashStart"), obj.getBigInteger("hashStop"));
+            metadata_list.add(temp);
+        }
+
+        return metadata_list;
     }
 }

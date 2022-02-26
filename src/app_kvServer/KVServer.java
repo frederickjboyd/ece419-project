@@ -21,19 +21,15 @@ import logger.LogSetup;
 import shared.communication.KVCommunicationServer;
 import persistent_storage.PersistentStorage;
 
-// Milestone 2 Imports
 import org.apache.zookeeper.*;
 import org.apache.zookeeper.server.quorum.QuorumPeerConfig.ConfigException;
 import org.apache.zookeeper.Watcher.Event.KeeperState;
 import ecs.IECSNode;
 import java.math.BigInteger;
-// For synchronization
 import java.util.concurrent.CountDownLatch;
-// TODO
 import shared.communication.AdminMessage;
 import shared.communication.KVMessage;
 import shared.Metadata;
-// Admin message type enum 
 import shared.communication.AdminMessage.MessageType;
 
 // Runnable for threading

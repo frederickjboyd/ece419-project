@@ -7,7 +7,6 @@ import java.math.BigInteger;
 import org.apache.log4j.Logger;
 import java.io.IOException;
 
-// For MD5 hashing
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 

@@ -24,7 +24,6 @@ import persistent_storage.PersistentStorage;
 import org.apache.zookeeper.*;
 import org.apache.zookeeper.server.quorum.QuorumPeerConfig.ConfigException;
 import org.apache.zookeeper.Watcher.Event.KeeperState;
-import ecs.IECSNode;
 import java.math.BigInteger;
 import java.util.concurrent.CountDownLatch;
 import shared.communication.AdminMessage;

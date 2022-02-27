@@ -76,6 +76,9 @@ public class KVServer implements IKVServer, Runnable {
     private boolean locked;
     private ServerStatus status;
 
+    // Latch to wait for completed action
+    final CountDownLatch syncLatch = new CountDownLatch(1);
+
     private Map<String, Metadata> allMetadata;
     private Metadata localMetadata;
 
@@ -132,6 +135,8 @@ public class KVServer implements IKVServer, Runnable {
     public KVServer(String name, int zooPort, String zooHost) {
         // Running as distributed system
         this.distributedMode = true;
+        // TODO Check: Start as stopped status
+        // this.status = ServerStatus.STOP;
         // Set server name
         this.name = name;
         // Write lock disabled
@@ -165,8 +170,6 @@ public class KVServer implements IKVServer, Runnable {
 
         // Initialize new zookeeper client
         try {
-            // Latch to wait for completed action
-            final CountDownLatch syncLatch = new CountDownLatch(1);
             this.zoo = new ZooKeeper(zooHost + ":" + zooPort, 5000, new Watcher() {
                 public void process(WatchedEvent we) {
                     if (we.getState() == KeeperState.SyncConnected) {
@@ -192,27 +195,98 @@ public class KVServer implements IKVServer, Runnable {
         } catch (KeeperException | InterruptedException e) {
             logger.error("Failed to create ZK ZNode: ", e);
         }
+
         // Handle metadata
+        handleMetadata();
+
+        // try {
+        //     // Given path, do we need to watch node, stat of node
+        //     byte[] adminMessageBytes = zoo.getData(zooPathServer, new Watcher() {
+        //         // See https://zookeeper.apache.org/doc/r3.1.2/javaExample.html
+        //         public void process(WatchedEvent we) {
+        //             if (running == false) {
+        //                 return;
+        //             } else {
+        //                 try {
+        //                     String adminMessageString = new String(zoo.getData(zooPathServer, this, null), StandardCharsets.UTF_8);
+        //                     handleAdminMessageHelper(adminMessageString);
+        //                 } catch (KeeperException | InterruptedException e) {
+        //                     logger.error("Failed to process admin message: ", e);
+        //                 }
+        //             }
+        //         }
+        //     }, null);
+
+        //     ECSNode node = getECSNode(adminMessageBytes);
+        //     // M2 Cache implementation - grab cache info from ECSNode
+        //     this.cacheSize = node.getCacheSize();
+        //     // TODO Check if this works to convert enum to string
+        //     this.strategy = node.getCacheStrategy().name();
+        //     this.cache = new kvCacheOperator(cacheSize, strategy);
+
+        //     // Process the admin Message
+        //     String adminMessageString = new String(adminMessageBytes, StandardCharsets.UTF_8);
+        //     handleAdminMessageHelper(adminMessageString);
+        // } catch (KeeperException | InterruptedException e) {
+        //     logger.error("Failed to process ZK metadata: ", e);
+        // }
+
+        // // Start main thread
+        // newThread = new Thread(this);
+        // newThread.start();
+    }
+
+    /**
+     * Helper function to handle ZK metadata and send to adminMessageHelper
+     */
+    public void handleMetadata() {
         try {
-            // Given path, do we need to watch node, stat of node
             byte[] adminMessageBytes = zoo.getData(zooPathServer, new Watcher() {
-                // See https://zookeeper.apache.org/doc/r3.1.2/javaExample.html
+                @Override
                 public void process(WatchedEvent we) {
-                    if (running == false) {
-                        return;
+                    if (we.getType() == Event.EventType.None) {
+                        switch (we.getState()) {
+                            case Expired:
+                                syncLatch.countDown();
+                                break;
+                        }
                     } else {
                         try {
-                            String adminMessageString = new String(zoo.getData(zooPathServer, this, null),
-                                    StandardCharsets.UTF_8);
-                            // Handle admin message depending on request type
-                            handleAdminMessageHelper(adminMessageString);
-                        } catch (KeeperException | InterruptedException e) {
-                            logger.error("Failed to process admin message: ", e);
+                            // Try again
+                            handleMetadata();
+                        } catch (Exception e) {
+                            logger.error("Failed to process admin message bytes: ", e);
                         }
                     }
                 }
             }, null);
 
+            ECSNode node = getECSNode(adminMessageBytes);
+            // M2 Cache implementation - grab cache info from ECSNode
+            this.cacheSize = node.getCacheSize();
+            // TODO Check if this works to convert enum to string
+            this.strategy = node.getCacheStrategy().name();
+            this.cache = new kvCacheOperator(cacheSize, strategy);
+
+            String adminMessageString = new String(adminMessageBytes, StandardCharsets.UTF_8);
+            handleAdminMessageHelper(adminMessageString);
+
+            syncLatch.await();
+
+        } catch (KeeperException e1) {
+            logger.error(e1);
+        } catch (InterruptedException e2) {
+            logger.error(e2);
+        }
+    }
+
+
+    /**
+     * Helper function to get ECS Node from admin message
+     * @param adminMessageBytes Input bytes of admin message
+     * @return
+     */
+    public ECSNode getECSNode(byte [] adminMessageBytes){
             // Process ECSNode
             ByteArrayInputStream byteInputTest = null;
             ObjectInputStream objectInputTest = null;
@@ -240,22 +314,7 @@ public class KVServer implements IKVServer, Runnable {
             }
     
             ECSNode node = (ECSNode)ECSObject;
-
-            // M2 Cache implementation - grab cache info from ECSNode
-            this.cacheSize = node.getCacheSize();
-            // TODO Check if this works to convert enum to string
-            this.strategy = node.getCacheStrategy().name();
-            this.cache = new kvCacheOperator(cacheSize, strategy);
-            // Process the admin Message
-            String adminMessageString = new String(adminMessageBytes, StandardCharsets.UTF_8);
-            handleAdminMessageHelper(adminMessageString);
-        } catch (KeeperException | InterruptedException e) {
-            logger.error("Failed to process ZK metadata: ", e);
-        }
-
-        // // Start main thread
-        // newThread = new Thread(this);
-        // newThread.start();
+            return node;
     }
 
 
@@ -636,8 +695,12 @@ public class KVServer implements IKVServer, Runnable {
                 // Remove unreachable KV Pairs from disk
                 //storage.delete(key);
                 // Cached version
-                putKV(key, "");
-
+                try{
+                    putKV(key, "");
+                }
+                catch(Exception e){
+                    logger.error("Failed to PUT from distributed server UPDATE: " + e);
+                }
             } else {
                 logger.error("Failed to remove unreachable KV pair from disk - reachable conflict!");
             }
@@ -670,15 +733,25 @@ public class KVServer implements IKVServer, Runnable {
                 // No cache (old version)
                 //storage.delete(entry.getKey());
                 // Cached version
-                putKV(entry.getKey().toString(), "");
-                
+                // Cached version
+                try{
+                    putKV(entry.getKey().toString(), "");
+                }
+                catch(Exception e){
+                    logger.error("Failed to PUT DELETE incoming data transfer from distributed server: " + e);
+                }
             }
             // Write new entries to disk
             else {
                 // No cache (old version)
                 //storage.put(entry.getKey().toString(), entry.getValue().toString());
                 // Cached version
-                putKV(entry.getKey().toString(), entry.getValue().toString());
+                try{
+                    putKV(entry.getKey().toString(), entry.getValue().toString());
+                }
+                catch(Exception e){
+                    logger.error("Failed to PUT incoming data transfer from distributed server: " + e);
+                }
             }
         }
         // Release write lock

@@ -4,6 +4,9 @@ import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 import org.apache.zookeeper.server.ServerConfig;
 import org.apache.zookeeper.server.ZooKeeperServerMain;
+
+import app_kvServer.IKVServer.CacheStrategy;
+
 import org.apache.zookeeper.Watcher;
 import org.apache.zookeeper.WatchedEvent;
 import org.apache.zookeeper.Watcher.Event.EventType;
@@ -138,8 +141,7 @@ public class ECSClient implements IECSClient {
     }
 
     @Override
-    // TODO: properly pass cache strategy to KVServer
-    public List<ECSNode> addNodes(int count, String cacheStrategy, int cacheSize) {
+    public List<ECSNode> addNodes(int count, String cacheStrategyStr, int cacheSize) {
         DebugHelper.logFuncEnter(logger);
 
         if (unavailableServers.size() == serverStatusInfo.size()) {
@@ -158,6 +160,7 @@ public class ECSClient implements IECSClient {
             return null;
         }
 
+        CacheStrategy cacheStrategyEnum = CacheStrategy.valueOf(cacheStrategyStr.toUpperCase());
         List<ECSNode> nodesAdded = new ArrayList<ECSNode>();
         Random rand = new Random();
         List<String> availableServers = getAvailableServers();
@@ -175,9 +178,10 @@ public class ECSClient implements IECSClient {
             if (hashRing.getHashRing().isEmpty()) {
                 List<String> newServerInfoList = new ArrayList<String>();
                 newServerInfoList.add(newServerInfo);
-                nodesAdded.addAll(hashRing.initHashRing(newServerInfoList)); // Creates and adds node to hash ring
+                // Creates and adds node to hash ring
+                nodesAdded.addAll(hashRing.initHashRing(newServerInfoList, cacheStrategyEnum, cacheSize));
             } else {
-                ECSNode newNode = hashRing.createECSNode(newServerInfo);
+                ECSNode newNode = hashRing.createECSNode(newServerInfo, cacheStrategyEnum, cacheSize);
                 hashRing.addNode(newNode);
                 nodesAdded.add(newNode);
             }
@@ -198,14 +202,14 @@ public class ECSClient implements IECSClient {
             }
         }
 
-        setupNodes(count, cacheStrategy, cacheSize);
+        setupNodes(count, cacheStrategyEnum, cacheSize);
         DebugHelper.logFuncExit(logger);
 
         return nodesAdded;
     }
 
     @Override
-    public Collection<ECSNode> setupNodes(int count, String cacheStrategy, int cacheSize) {
+    public Collection<ECSNode> setupNodes(int count, CacheStrategy cacheStrategy, int cacheSize) {
         DebugHelper.logFuncEnter(logger);
 
         if (!isServerCountValid(count)) {

@@ -1,7 +1,9 @@
 package app_kvServer;
 
+import java.io.ByteArrayInputStream;
 import java.io.File;
 import java.io.IOException;
+import java.io.ObjectInputStream;
 import java.net.BindException;
 import java.net.InetAddress;
 import java.net.ServerSocket;
@@ -39,7 +41,6 @@ import app_kvServer.kvCache.kvCacheOperator;
 
 // Runnable for threading
 public class KVServer implements IKVServer, Runnable {
-
     private static Logger logger = Logger.getRootLogger();
 
     // M2 Cache implementation
@@ -162,11 +163,6 @@ public class KVServer implements IKVServer, Runnable {
         this.zooHost = zooHost;
         this.zooPort = zooPort;
 
-        // M2 Cache implementation
-        this.cacheSize = cacheSize;
-        this.strategy = strategy;
-        this.cache = new kvCacheOperator(cacheSize, strategy);
-
         // Initialize new zookeeper client
         try {
             // Latch to wait for completed action
@@ -217,12 +213,46 @@ public class KVServer implements IKVServer, Runnable {
                 }
             }, null);
 
-            // TODO
+            // Process ECSNode
+            ByteArrayInputStream byteInputTest = null;
+            ObjectInputStream objectInputTest = null;
+            Object ECSObject = null;
+
+            try {
+                byteInputTest = new ByteArrayInputStream(adminMessageBytes);
+                objectInputTest = new ObjectInputStream(byteInputTest);
+                ECSObject = objectInputTest.readObject();
+            } catch (IOException ioe) {
+                logger.error(ioe);
+            } catch (ClassNotFoundException cnfe) {
+                logger.error(cnfe);
+            } finally {
+                try {
+                    if (byteInputTest != null) {
+                        byteInputTest.close();
+                    }
+                    if (objectInputTest != null) {
+                        objectInputTest.close();
+                    }
+                } catch (IOException ioe) {
+                    logger.error(ioe);
+                }
+            }
+    
+            ECSNode node = (ECSNode)ECSObject;
+
+            // M2 Cache implementation - grab cache info from ECSNode
+            this.cacheSize = node.getCacheSize();
+            // TODO Check if this works to convert enum to string
+            this.strategy = node.getCacheStrategy().name();
+            this.cache = new kvCacheOperator(cacheSize, strategy);
+            // Process the admin Message
             String adminMessageString = new String(adminMessageBytes, StandardCharsets.UTF_8);
             handleAdminMessageHelper(adminMessageString);
         } catch (KeeperException | InterruptedException e) {
             logger.error("Failed to process ZK metadata: ", e);
         }
+
         // // Start main thread
         // newThread = new Thread(this);
         // newThread.start();
@@ -581,19 +611,6 @@ public class KVServer implements IKVServer, Runnable {
 
         // Get unreachable entries based on current hash range
         Map<String, String> unreachableEntries = storage.hashUnreachable(begin, end);
-        // Iterate through unreachable entries
-        Iterator itr = unreachableEntries.entrySet().iterator();
-
-        while (itr.hasNext()) {
-            Map.Entry keyVal = (Map.Entry) itr.next();
-            String key = (String) keyVal.getKey();
-            if (!storage.keyValid(storage.MD5Hash(key), begin, end)) {
-                // Remove unreachable KV Pairs from disk
-                storage.delete(key);
-            } else {
-                logger.error("Failed to remove unreachable KV pair from disk - reachable conflict!");
-            }
-        }
 
         // Get metadata of destination server
         Metadata transferServerMetadata = allMetadata.get(end.toString());
@@ -607,6 +624,25 @@ public class KVServer implements IKVServer, Runnable {
         } catch (InterruptedException | KeeperException e) {
             logger.error("Failed to send admin message with unreachable entries: ", e);
         }
+
+        // TODO - need to receive confirmation of data transfer complete from ECSNode
+        // Iterate through unreachable entries and remove from storage
+        Iterator itr = unreachableEntries.entrySet().iterator();
+
+        while (itr.hasNext()) {
+            Map.Entry keyVal = (Map.Entry) itr.next();
+            String key = (String) keyVal.getKey();
+            if (!storage.keyValid(storage.MD5Hash(key), begin, end)) {
+                // Remove unreachable KV Pairs from disk
+                //storage.delete(key);
+                // Cached version
+                putKV(key, "");
+
+            } else {
+                logger.error("Failed to remove unreachable KV pair from disk - reachable conflict!");
+            }
+        }
+
         // Release write lock
         unLockWrite();
     }
@@ -631,11 +667,18 @@ public class KVServer implements IKVServer, Runnable {
             Map.Entry<String, String> entry = itr.next();
             // TODO - Check this logic
             if (entry.getValue().toString().equals("")) {
-                storage.delete(entry.getKey());
+                // No cache (old version)
+                //storage.delete(entry.getKey());
+                // Cached version
+                putKV(entry.getKey().toString(), "");
+                
             }
             // Write new entries to disk
             else {
-                storage.put(entry.getKey().toString(), entry.getValue().toString());
+                // No cache (old version)
+                //storage.put(entry.getKey().toString(), entry.getValue().toString());
+                // Cached version
+                putKV(entry.getKey().toString(), entry.getValue().toString());
             }
         }
         // Release write lock

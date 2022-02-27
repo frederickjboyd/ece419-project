@@ -118,7 +118,7 @@ public class kvCacheOperator {
 
     public void clearCache() {
         if (cache != null) {
-            cache.clear();
+            cache.clearCache();
         }
         else{
             logger.error("Cache is not initialized, can't clear!");

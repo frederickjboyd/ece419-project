@@ -25,6 +25,7 @@ import org.apache.zookeeper.*;
 import org.apache.zookeeper.server.quorum.QuorumPeerConfig.ConfigException;
 
 import app_kvECS.ECSClient;
+import ecs.ECSNode;
 
 import org.apache.zookeeper.Watcher.Event.KeeperState;
 import java.math.BigInteger;
@@ -192,7 +193,7 @@ public class KVServer implements IKVServer, Runnable {
                         try {
                             String adminMessageString = new String(zoo.getData(zooPathServer, this, null),
                                     StandardCharsets.UTF_8);
-                            // TODO
+                            // Handle admin message depending on request type
                             handleAdminMessageHelper(adminMessageString);
                         } catch (KeeperException | InterruptedException e) {
                             logger.error("Failed to process admin message: ", e);
@@ -211,6 +212,7 @@ public class KVServer implements IKVServer, Runnable {
         // newThread = new Thread(this);
         // newThread.start();
     }
+
 
     @Override
     public int getPort() {
@@ -369,6 +371,14 @@ public class KVServer implements IKVServer, Runnable {
     // ********************** Milestone 2 Modifications **********************
 
     /**
+     *  Returns boolean for server mode (distributed or not)
+     * @return True if distributed, False if non-distributed
+     */
+    public boolean distributed(){
+		return distributedMode;
+	}
+
+    /**
      * Helper function to get current status of the server
      */
     @Override
@@ -413,6 +423,75 @@ public class KVServer implements IKVServer, Runnable {
         logger.info("RELEASE WRITE LOCK: Future write requests allowed for now!");
     }
 
+
+    // /**
+    //  * Transfer a subset (range) of the KVServer’s data to another KVServer 
+    //  * (reallocation before removing this server or adding a new KVServer to the ring); 
+    //  * send a notification to the ECS, if data transfer is completed.
+    //  * 
+    //  * @param adminMessageString Admin message string from communications
+    //  */
+    // @Override
+    // public void moveData(String adminMessageString) {
+    //     // Process incoming admin message
+    //     AdminMessage incomingMessage = new AdminMessage(adminMessageString);
+    //     Map<String, Metadata> incomingMetadataMap = incomingMessage.getMsgMetadata();
+    //     Metadata incomingMetadata = incomingMetadataMap.get(hashedName);
+
+    //     // ************ Move data to target server ************
+
+    //     // Original start
+    //     BigInteger originalBegin = localMetadata.getHashStart();
+    //     // Original Stop
+    //     BigInteger originalEnd = localMetadata.getHashStop();
+
+	// 	Map<String, String> invalidKVPairs = null;
+        
+    //     if (localMetadata != null && !localMetadata.stop.equals(incomingMetadata.stop)){
+	// 		BigInteger stop = serverMetadata.getHashStop;
+	// 		BigInteger newStop = serverMetadatasMap.get(stop.toString()).getHashStop;
+	// 		invalidKVPairs = hashReachable(stop, newStop);
+	// 	}
+
+    
+    //     // Acquire write lock
+    //     lockWrite();
+
+    //     // Get unreachable entries based on current hash range
+    //     Map<String, String> unreachableEntries = storage.hashUnreachable(begin, end);
+    //     // Iterate through unreachable entries
+    //     Iterator itr = unreachableEntries.entrySet().iterator();
+
+
+    //     // Get metadata of destination server
+    //     Metadata transferServerMetadata = allMetadata.get(end.toString());
+    //     // Build destination server name
+    //     String transferServerName = zooPathRoot + "/" + transferServerMetadata.getHost() + ":"
+    //             + transferServerMetadata.getPort();
+    //     try {
+    //         // Send admin message to destination
+    //         // Need to confirm enums in MessageType, if TRANSFER_DATA available
+    //         sendMessage(MessageType.TRANSFER_DATA, null, unreachableEntries, transferServerName);
+    //     } catch (InterruptedException | KeeperException e) {
+    //         logger.error("Failed to send admin message with unreachable entries: ", e);
+    //     }
+
+    //     // Remove unreachable KV Pairs from this server
+    //     while (itr.hasNext()) {
+    //         Map.Entry keyVal = (Map.Entry) itr.next();
+    //         String key = (String) keyVal.getKey();
+    //         if (!storage.keyValid(storage.MD5Hash(key), begin, end)) {
+    //             storage.delete(key);
+    //         } else {
+    //             logger.error("Failed to remove unreachable KV pair from disk - reachable conflict!");
+    //         }
+    //     }
+
+    //     // Release write lock
+    //     unLockWrite();
+    // }
+
+
     /**
      * Update metadata, move entries as required
      * 
@@ -450,7 +529,7 @@ public class KVServer implements IKVServer, Runnable {
         while (itr.hasNext()) {
             Map.Entry keyVal = (Map.Entry) itr.next();
             String key = (String) keyVal.getKey();
-            if (!storage.hashReachable(storage.MD5Hash(key), begin, end)) {
+            if (!storage.keyValid(storage.MD5Hash(key), begin, end)) {
                 // Remove unreachable KV Pairs from disk
                 storage.delete(key);
             } else {
@@ -475,7 +554,7 @@ public class KVServer implements IKVServer, Runnable {
     }
 
     /**
-     * Receive new KV Pairs and store into persistent storage
+     * Receive new incoming KV Pairs and store into persistent storage
      * 
      * @param adminMessageString Incoming admin message string
      */
@@ -519,6 +598,7 @@ public class KVServer implements IKVServer, Runnable {
             String destination) throws KeeperException, InterruptedException {
         AdminMessage toSend = new AdminMessage(type, metadata, data);
         zoo.setData(destination, toSend.toBytes(), zoo.exists(destination, false).getVersion());
+        logger.info("Sent KV Transfer Message to: ",destination);
     }
 
     /**
@@ -576,6 +656,12 @@ public class KVServer implements IKVServer, Runnable {
             else if (incomingMessageType == MessageType.TRANSFER_DATA) {
                 processDataTransfer(adminMessageString);
             }
+
+            // // Transfer a subset of data to another server
+            // else if (incomingMessageType == MessageType.MOVE_DATA){
+            //     moveData(adminMessageString);
+            // }
+
             // Update metadata repository for this server, shift entries if needed
             else if (incomingMessageType == MessageType.UPDATE) {
                 update(adminMessageString);

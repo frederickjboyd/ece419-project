@@ -23,6 +23,9 @@ import persistent_storage.PersistentStorage;
 
 import org.apache.zookeeper.*;
 import org.apache.zookeeper.server.quorum.QuorumPeerConfig.ConfigException;
+
+import app_kvECS.ECSClient;
+
 import org.apache.zookeeper.Watcher.Event.KeeperState;
 import java.math.BigInteger;
 import java.util.concurrent.CountDownLatch;
@@ -53,7 +56,7 @@ public class KVServer implements IKVServer, Runnable {
     // Zookeeper vars
     private ZooKeeper zoo;
     private String zooHost;
-    private String zooPathRoot = "/StorageServerRoot";
+    private String zooPathRoot = ECSClient.ZK_ROOT_PATH;
     private String zooPathServer;
     private int zooPort;
 
@@ -588,6 +591,8 @@ public class KVServer implements IKVServer, Runnable {
      *             strategy at args[2]
      */
     public static void main(String[] args) throws IOException {
+        System.out.println("KVServer running!");
+
         try {
             new LogSetup("logs/server.log", Level.ALL);
             if (args.length != 3) {

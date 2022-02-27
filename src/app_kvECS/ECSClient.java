@@ -46,7 +46,7 @@ public class ECSClient implements IECSClient {
     private HashRing hashRing;
     private ArrayList<String> unavailableServers = new ArrayList<String>(); // Any servers that are not OFFLINE
 
-    private static final String ZK_ROOT_PATH = "/zkRoot";
+    public static final String ZK_ROOT_PATH = "/zkRoot";
     private static final String ZK_CONF_PATH = "zoo.cfg";
     private static final String SERVER_DIR = "~/ece419-project";
     private static final String SERVER_JAR = "m2-server.jar";

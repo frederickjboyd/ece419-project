@@ -27,6 +27,7 @@ hs_err_pid*
 *.MF
 .vscode
 *.tgz
+*.out
 
 # Key-value data
 data

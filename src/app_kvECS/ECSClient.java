@@ -183,10 +183,11 @@ public class ECSClient implements IECSClient {
             }
 
             // Start KVServer via SSH
+            String cd = String.format(String.format("cd %s;", SERVER_DIR));
             String sshRunServerJar = String.format("java -jar %s/%s %s %s %s", SERVER_DIR, SERVER_JAR, newServerInfo,
                     ZK_PORT, ZK_HOST);
-            String sshNohup = String.format("nohup %s &> logs/nohup.%s.out &", sshRunServerJar, newServerInfo);
-            String sshStart = String.format("ssh -o StringHostKeyChecking=no %s %s", ZK_HOST, sshNohup);
+            String sshNohup = String.format("nohup %s > logs/%s.out &", sshRunServerJar, newServerInfo);
+            String sshStart = String.format("ssh -o StrictHostKeyChecking=no -n %s %s %s", ZK_HOST, cd, sshNohup);
             logger.info(String.format("Executing command: %s", sshStart));
 
             try {

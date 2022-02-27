@@ -1,6 +1,9 @@
 package app_kvECS;
 
 import java.util.Map;
+
+import app_kvServer.IKVServer.CacheStrategy;
+
 import java.math.BigInteger;
 import java.util.Collection;
 
@@ -35,7 +38,7 @@ public interface IECSClient {
      * 
      * @return array of strings, containing unique names of servers
      */
-    public Collection<ECSNode> setupNodes(int count, String cacheStrategy, int cacheSize);
+    public Collection<ECSNode> setupNodes(int count, CacheStrategy cacheStrategy, int cacheSize);
 
     /**
      * Wait for all nodes to report status or until timeout expires

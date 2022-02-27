@@ -35,14 +35,19 @@ import shared.communication.KVMessage;
 import shared.Metadata;
 import shared.communication.AdminMessage.MessageType;
 
+import app_kvServer.kvCache.kvCacheOperator;
+
 // Runnable for threading
 public class KVServer implements IKVServer, Runnable {
 
     private static Logger logger = Logger.getRootLogger();
 
-    private int port;
+    // M2 Cache implementation
     private int cacheSize;
+    private kvCacheOperator cache;
     private String strategy;
+
+    private int port;
     private ServerSocket serverSocket;
     private boolean running;
 
@@ -90,7 +95,12 @@ public class KVServer implements IKVServer, Runnable {
         this.threadList = new ArrayList<Thread>();
         this.port = port;
         this.serverSocket = null;
+
+        // M2 Cache implementation
         this.cacheSize = cacheSize;
+        this.strategy = strategy;
+        this.cache = new kvCacheOperator(cacheSize, strategy);
+
         this.name = getHostname() + ":" + getPort();
 
         // Not running as distributed system
@@ -123,12 +133,12 @@ public class KVServer implements IKVServer, Runnable {
         this.distributedMode = true;
         // Set server name
         this.name = name;
+        // Write lock disabled
         this.locked = false;
         // Store list of client threads
         this.threadList = new ArrayList<Thread>();
         // Split server name to get port (provided in ipaddr:port format)
         this.port = Integer.parseInt(name.split(":")[1]);
-        this.cacheSize = 0;
 
         // Check if file directory exists
         File testFile = new File(dataDirectory);
@@ -151,6 +161,11 @@ public class KVServer implements IKVServer, Runnable {
         this.zooPathServer = zooPathRoot + "/" + name;
         this.zooHost = zooHost;
         this.zooPort = zooPort;
+
+        // M2 Cache implementation
+        this.cacheSize = cacheSize;
+        this.strategy = strategy;
+        this.cache = new kvCacheOperator(cacheSize, strategy);
 
         // Initialize new zookeeper client
         try {
@@ -232,8 +247,17 @@ public class KVServer implements IKVServer, Runnable {
 
     @Override
     public CacheStrategy getCacheStrategy() {
-        // Skip for now
-        return IKVServer.CacheStrategy.None;
+        // Implemented under M2
+        switch (this.strategy) {
+            case "LRU":
+                return IKVServer.CacheStrategy.LRU;
+            case "LFU":
+                return IKVServer.CacheStrategy.LFU;
+            case "FIFO":
+                return IKVServer.CacheStrategy.FIFO;
+            default:
+                return IKVServer.CacheStrategy.None;
+        }
     }
 
     @Override
@@ -248,19 +272,40 @@ public class KVServer implements IKVServer, Runnable {
         return storage.existsCheck(key);
     }
 
+    /**
+     * Check if key has value in cache
+     */
     @Override
     public boolean inCache(String key) {
-        // TODO Auto-generated method stub
-        return false;
+        if (cache.cacheActiveStatus() == true) {
+            return cache.inCache(key);
+        }
+        else{
+            return false;
+        }
     }
 
     @Override
     public String getKV(String key) throws Exception {
-        String value = storage.get(key);
+        String value = null;
+        // Check cache first
+        if (cache.cacheActiveStatus() == true) {
+            value = cache.getCache(key);
+            // Value was in cache
+            if (value != null){
+                return value;
+            }
+        }
+        // Value was not in cache, look on disk
+        value = storage.get(key);
         if (value == null) {
             logger.error("Key: " + key + " cannot be found on storage!");
             throw new Exception("Failed to find key in storage!");
         } else {
+            // Write to cache
+            if (cache.cacheActiveStatus()) {
+                cache.putCache(key, value);
+            }
             return value;
         }
     }
@@ -274,6 +319,12 @@ public class KVServer implements IKVServer, Runnable {
                 // System.out.println("****A blank value was PUT, delete key: "+key);
                 // Delete key if no value was provided in put
                 storage.delete(key);
+
+                // Remove from cache as well
+                if (cache.cacheActiveStatus()) {
+                    cache.delete(key);
+                }   
+
             } else {
                 logger.error("Tried to delete non-existent key: " + key);
                 throw new Exception("Tried to delete non-existent key!");
@@ -283,16 +334,23 @@ public class KVServer implements IKVServer, Runnable {
             logger.error("Failed to PUT (" + key + ',' + value + ") into map!");
             throw new Exception("Failed to put KV pair in storage!");
         }
+        // Write to cache
+        if (cache.cacheActiveStatus()) {
+            cache.putCache(key, value);
+        }
     }
 
     @Override
     public void clearCache() {
-        // TODO Auto-generated method stub
+        if (cache.cacheActiveStatus()) {
+            cache.clearCache();
+        }
     }
 
     @Override
     public void clearStorage() {
         storage.wipeStorage();
+        clearCache();
     }
 
     @Override
@@ -598,7 +656,7 @@ public class KVServer implements IKVServer, Runnable {
             String destination) throws KeeperException, InterruptedException {
         AdminMessage toSend = new AdminMessage(type, metadata, data);
         zoo.setData(destination, toSend.toBytes(), zoo.exists(destination, false).getVersion());
-        logger.info("Sent KV Transfer Message to: ",destination);
+        logger.info("Sent KV Transfer Message to: " + destination);
     }
 
     /**

@@ -267,6 +267,9 @@ public class KVMessage implements IKVMessage {
         // return metadata_list;
 
         JSONObject metadata_jo = new JSONObject(value);
+        System.out.println("sdfghjklkjhgfghjklkjhghjklkjhhjkl");
+
+        System.out.println(value);
         ArrayList<Metadata> metadata_list = new ArrayList<>();
         Iterator<String> keys = metadata_jo.keys();
 

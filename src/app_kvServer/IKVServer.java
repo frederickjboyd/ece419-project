@@ -135,6 +135,8 @@ public interface IKVServer {
 
     public void unLockWrite();
 
+    public boolean getLockWrite();
+
     /**
      * Update server metadata, shift entries as required
      */

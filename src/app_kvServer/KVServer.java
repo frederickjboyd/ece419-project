@@ -410,6 +410,11 @@ public class KVServer implements IKVServer, Runnable {
         logger.info("RELEASE WRITE LOCK: Future write requests allowed for now!");
     }
 
+    @Override
+    public boolean getLockWrite(){ 
+		return locked;
+	}
+    
     /**
      * Update metadata, move entries as required
      * 
@@ -502,6 +507,10 @@ public class KVServer implements IKVServer, Runnable {
         unLockWrite();
     }
 
+    public boolean distributed(){
+		return distributedMode;
+	}
+    
     /**
      * Send new admin message to destination servers
      * 

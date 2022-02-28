@@ -14,13 +14,13 @@ import shared.Metadata;
 
 public class AdminMessage {
     public enum MessageType {
-        ACK, // Acknowledge message receipt
         INIT, // Initialize KVServer, but do not respond to clients yet
         START, // Start KVServer
         UPDATE, // KVServer needs to update metadata
         STOP, // Stop KVServer from responding to clients, but do not terminate it
         SHUTDOWN, // Terminate KVServer
-        TRANSFER_DATA // Transfer data between nodes
+        TRANSFER_DATA, // Request from a node to move its key-value pairs
+        TRANSFER_DATA_COMPLETE // All key-value pairs have been successfully received
     }
 
     private static Logger logger = Logger.getRootLogger();
@@ -29,13 +29,13 @@ public class AdminMessage {
 
     private MessageType msgType;
     private Map<String, Metadata> msgMetadata;
-    private Map<String, String> msgKeyValue;
+    private Map<String, String> msgKeyValues;
 
-    public AdminMessage(MessageType msgType, Map<String, Metadata> msgMetadata, Map<String, String> msgKeyValue) {
+    public AdminMessage(MessageType msgType, Map<String, Metadata> msgMetadata, Map<String, String> msgKeyValues) {
         DebugHelper.logFuncEnter(logger);
         this.msgType = msgType;
         this.msgMetadata = msgMetadata;
-        this.msgKeyValue = msgKeyValue;
+        this.msgKeyValues = msgKeyValues;
         DebugHelper.logFuncExit(logger);
     }
 
@@ -50,7 +50,7 @@ public class AdminMessage {
         }.getType();
         this.msgMetadata = gson.fromJson(tokens[1], metadataMapType);
 
-        this.msgKeyValue = gson.fromJson(tokens[2], Map.class);
+        this.msgKeyValues = gson.fromJson(tokens[2], Map.class);
 
         DebugHelper.logFuncExit(logger);
     }
@@ -65,7 +65,7 @@ public class AdminMessage {
         Gson gson = new Gson();
         String type = msgType.toString();
         String metadata = gson.toJson(msgMetadata);
-        String keyValue = gson.toJson(msgKeyValue);
+        String keyValue = gson.toJson(msgKeyValues);
         String msgString = type + SEP + metadata + keyValue;
 
         return msgString.getBytes(StandardCharsets.US_ASCII);
@@ -80,6 +80,6 @@ public class AdminMessage {
     }
 
     public Map<String, String> getMsgKeyValue() {
-        return this.msgKeyValue;
+        return this.msgKeyValues;
     }
 }

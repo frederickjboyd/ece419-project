@@ -181,7 +181,7 @@ public class KVServer implements IKVServer, Runnable {
                 }
             });
 
-            logger.info("Succesfully initialized new ZooKeeper client on serverside!");
+            logger.info("Succesfully initialized new ZooKeeper client on serverside! Zoo host: " + zooHost + " Zoo port: " + zooPort);
             // Blocks until current count reaches zero
             syncLatch.await();
         } catch (IOException | InterruptedException e) {
@@ -196,7 +196,7 @@ public class KVServer implements IKVServer, Runnable {
                 // client DC)
                 zoo.create(zooPathServer, new byte[0], ZooDefs.Ids.OPEN_ACL_UNSAFE, CreateMode.PERSISTENT);
 
-                logger.info("Succesfully created ZNode on serverside!");
+                logger.info("Succesfully created ZNode on serverside at zooPathServer: " + zooPathServer);
 
             }
         } catch (KeeperException | InterruptedException e) {

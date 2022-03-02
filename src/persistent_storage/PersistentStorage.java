@@ -275,7 +275,7 @@ public class PersistentStorage implements IPersistentStorage {
      * @param key   Key to be checked
      * @return True if in range, False if out of range
      */
-    public boolean hashReachable(BigInteger begin, BigInteger end, BigInteger key) {
+    public boolean keyValid(BigInteger begin, BigInteger end, BigInteger key) {
         // Case 1: Begin <= End, key > begin, key < end
         // Case 2: Begin >= End, key < begin, key < end
         // Case 3: Begin >= End, key > begin, key > end
@@ -288,9 +288,44 @@ public class PersistentStorage implements IPersistentStorage {
         }
     }
 
+
     /**
      * Grab KV Pairs from current server db and check if in valid range.
-     * If unreachable, return in new table.
+     * If REACHABLE, return in new table.
+     * 
+     * @param begin Beginning of valid range
+     * @param end   End of valid range
+     * @return
+     */
+    public Map<String, String> hashReachable(BigInteger begin, BigInteger end) {
+        // Load local map with existing entries in storage
+        Map<String, String> tempMap = new HashMap<String, String>();
+        Properties properties = new Properties();
+        try {
+            properties.load(new FileInputStream(this.directory + '/' + this.databaseName));
+            for (String key : properties.stringPropertyNames()) {
+                tempMap.put(key, properties.get(key).toString());
+            }
+        } catch (IOException e) {
+            logger.error("Failed to load existing properties file!", e);
+        }
+        // Activate synchronized map
+        Map<String, String> currentTable = Collections.synchronizedMap(tempMap);
+        Map<String, String> newTable = new HashMap<String, String>();
+        // If key is reachable in current range, add to new table
+        for (Map.Entry keyValPair : currentTable.entrySet()) {
+            String key = (String) keyValPair.getKey();
+            if (keyValid(begin, end, MD5Hash(key)) == true) {
+                newTable.put(key, (String) keyValPair.getValue());
+            }
+        }
+        return newTable;
+    }
+
+
+    /**
+     * Grab KV Pairs from current server db and check if in valid range.
+     * If UNREACHABLE, return in new table.
      * 
      * @param begin Beginning of valid range
      * @param end   End of valid range
@@ -314,7 +349,7 @@ public class PersistentStorage implements IPersistentStorage {
         // If key is unreachable in current range, add to new table
         for (Map.Entry keyValPair : currentTable.entrySet()) {
             String key = (String) keyValPair.getKey();
-            if (hashReachable(begin, end, MD5Hash(key)) == false) {
+            if (keyValid(begin, end, MD5Hash(key)) == false) {
                 newTable.put(key, (String) keyValPair.getValue());
             }
         }

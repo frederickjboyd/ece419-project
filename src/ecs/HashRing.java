@@ -2,6 +2,7 @@ package ecs;
 
 import org.apache.log4j.Logger;
 
+import app_kvServer.IKVServer.CacheStrategy;
 import shared.DebugHelper;
 import shared.Metadata;
 
@@ -29,7 +30,7 @@ public class HashRing {
      * 
      * @param serverInfo All server information, each in a <name>:<ip>:<port> format
      */
-    public List<ECSNode> initHashRing(List<String> serverInfo) {
+    public List<ECSNode> initHashRing(List<String> serverInfo, CacheStrategy cacheStrategy, int cacheSize) {
         DebugHelper.logFuncEnter(logger);
         int hashRingSize = serverInfo.size();
         List<ECSNode> nodesAdded = new ArrayList<ECSNode>();
@@ -37,7 +38,7 @@ public class HashRing {
         // Add each node to hash ring
         for (int i = 0; i < hashRingSize; i++) {
             String info = serverInfo.get(i);
-            ECSNode node = createECSNode(info);
+            ECSNode node = createECSNode(info, cacheStrategy, cacheSize);
             hashRing.put(node.getNodeID(), node);
             nodesAdded.add(node);
         }
@@ -73,7 +74,7 @@ public class HashRing {
         DebugHelper.logFuncExit(logger);
     }
 
-    public ECSNode createECSNode(String info) {
+    public ECSNode createECSNode(String info, CacheStrategy cacheStrategy, int cacheSize) {
         DebugHelper.logFuncEnter(logger);
         String[] infoArray = info.split(":");
         String name = infoArray[0];
@@ -82,9 +83,10 @@ public class HashRing {
         String infoToHash = createStringToHash(host, port);
         BigInteger nodeID = hashServerInfo(infoToHash);
         logger.info(String.format("Hashed %s --> %d", infoToHash, nodeID));
-        logger.debug(String.format("ID: %d, name: %s, host: %s, port: %d", nodeID, name, host, port));
+        logger.debug(String.format("ID: %d, name: %s, host: %s, port: %d, cache: %s, %d", nodeID, name, host, port,
+                cacheStrategy.toString(), cacheSize));
 
-        ECSNode node = new ECSNode(nodeID, name, host, port);
+        ECSNode node = new ECSNode(nodeID, name, host, port, cacheStrategy, cacheSize);
         DebugHelper.logFuncExit(logger);
 
         return node;

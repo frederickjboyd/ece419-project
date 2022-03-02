@@ -2,6 +2,9 @@ package ecs;
 
 import org.apache.log4j.Logger;
 
+import app_kvServer.IKVServer.CacheStrategy;
+import shared.DebugHelper;
+
 import java.math.BigInteger;
 
 public class ECSNode {
@@ -9,6 +12,8 @@ public class ECSNode {
     private String name; // Name of server provided in ECS config file
     private String host; // IP
     private int port; // Port
+    private CacheStrategy cacheStrategy; // Cache method to use
+    private int cacheSize; // Size of cache
     private BigInteger prevNodeID; // MD5 hash of previous node in ring
     private BigInteger nextNodeID; // MD5 hash of next node in ring
     private BigInteger[] hashRange; // Range of hashes the node is responsible for
@@ -23,38 +28,22 @@ public class ECSNode {
         ONLINE // Node added and started
     }
 
-    public ECSNode(BigInteger ID, String name, String host, int port, BigInteger prevNodeID, BigInteger nextNodeID,
-            BigInteger[] hashRange) {
+    public ECSNode(BigInteger ID, String name, String host, int port, CacheStrategy cacheStrategy, int cacheSize) {
+        DebugHelper.logFuncEnter(logger);
         this.ID = ID;
         this.name = name;
         this.host = host;
         this.port = port;
-        this.prevNodeID = prevNodeID;
-        this.nextNodeID = nextNodeID;
-        this.hashRange = hashRange;
+        this.cacheStrategy = cacheStrategy;
+        this.cacheSize = cacheSize;
 
         logger.debug("Instantiate ECSNode with:");
         logger.debug(String.format("\tID:\t\t%d", this.ID));
         logger.debug(String.format("\tName:\t\t%s", this.name));
         logger.debug(String.format("\tHost:\t\t%s", this.host));
         logger.debug(String.format("\tPort:\t\t%d", this.port));
-        logger.debug(String.format("\tprevNodeID:\t%d", this.prevNodeID));
-        logger.debug(String.format("\tnextNodeID:\t%d", this.nextNodeID));
-        logger.debug(String.format("\thashRange[0]:\t%d", this.hashRange[0]));
-        logger.debug(String.format("\thashRange[1]:\t%d", this.hashRange[1]));
-    }
-
-    public ECSNode(BigInteger ID, String name, String host, int port) {
-        this.ID = ID;
-        this.name = name;
-        this.host = host;
-        this.port = port;
-
-        logger.debug("Instantiate ECSNode with:");
-        logger.debug(String.format("\tID:\t\t%d", this.ID));
-        logger.debug(String.format("\tName:\t\t%s", this.name));
-        logger.debug(String.format("\tHost:\t\t%s", this.host));
-        logger.debug(String.format("\tPort:\t\t%d", this.port));
+        logger.debug(String.format("\tCache:\t\t%s, %d", this.cacheStrategy.toString(), this.cacheSize));
+        DebugHelper.logFuncExit(logger);
     }
 
     /**
@@ -80,6 +69,14 @@ public class ECSNode {
      */
     public int getNodePort() {
         return this.port;
+    }
+
+    public CacheStrategy getCacheStrategy() {
+        return this.cacheStrategy;
+    }
+
+    public int getCacheSize() {
+        return this.cacheSize;
     }
 
     public BigInteger getPrevNodeID() {

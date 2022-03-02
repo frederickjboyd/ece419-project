@@ -42,14 +42,14 @@ public class AdminMessage {
     public AdminMessage(String msg) {
         DebugHelper.logFuncEnter(logger);
 
-        String[] tokens = msg.split(Character.toString(SEP), 4);
+        logger.debug(String.format("Constructing AdminMessage with %s", msg));
+        String[] tokens = msg.split(String.valueOf(SEP), 4);
         this.msgType = MessageType.valueOf(tokens[0].toUpperCase());
 
         Gson gson = new Gson();
         Type metadataMapType = new TypeToken<Map<String, Metadata>>() {
         }.getType();
         this.msgMetadata = gson.fromJson(tokens[1], metadataMapType);
-
         this.msgKeyValues = gson.fromJson(tokens[2], Map.class);
 
         DebugHelper.logFuncExit(logger);
@@ -66,7 +66,7 @@ public class AdminMessage {
         String type = msgType.toString();
         String metadata = gson.toJson(msgMetadata);
         String keyValue = gson.toJson(msgKeyValues);
-        String msgString = type + SEP + metadata + keyValue;
+        String msgString = type + SEP + metadata + SEP + keyValue;
 
         return msgString.getBytes(StandardCharsets.US_ASCII);
     }

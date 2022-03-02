@@ -38,6 +38,9 @@ import shared.communication.AdminMessage.MessageType;
 import shared.DebugHelper;
 import shared.Metadata;
 
+/**
+ * Main ECS client that user interacts with to manage servers.
+ */
 public class ECSClient implements IECSClient {
     // Prevent external libraries from spamming console
     private static Logger logger = Logger.getLogger(ECSClient.class);
@@ -102,6 +105,9 @@ public class ECSClient implements IECSClient {
         DebugHelper.logFuncExit(logger);
     }
 
+    /**
+     * Class to run ZooKeeper in a separate thread.
+     */
     private class ZooKeeperServer implements Runnable {
         public void run() {
             try {
@@ -117,6 +123,9 @@ public class ECSClient implements IECSClient {
         }
     }
 
+    /**
+     * Class that signals when ZooKeeper client has successfully started.
+     */
     private class ZooKeeperWatcher implements Watcher {
         private CountDownLatch latch;
 
@@ -188,8 +197,9 @@ public class ECSClient implements IECSClient {
 
             // Start KVServer via SSH
             String cd = String.format(String.format("cd %s;", SERVER_DIR));
-            String sshRunServerJar = String.format("java -jar %s/%s %s %s %s", SERVER_DIR, SERVER_JAR, newServerInfo,
-                    ZK_PORT, ZK_HOST);
+            String newServerHostAndPort = getHostAndPort(newServerInfo);
+            String sshRunServerJar = String.format("java -jar %s/%s %s %s %s", SERVER_DIR, SERVER_JAR,
+                    newServerHostAndPort, ZK_PORT, ZK_HOST);
             String sshNohup = String.format("nohup %s > logs/%s.out &", sshRunServerJar, newServerInfo);
             String sshStart = String.format("ssh -o StrictHostKeyChecking=no -n %s %s %s", ZK_HOST, cd, sshNohup);
             logger.info(String.format("Executing command: %s", sshStart));
@@ -217,11 +227,13 @@ public class ECSClient implements IECSClient {
         }
 
         for (String serverInfo : unavailableServers) {
-            String zkNodePath = String.format("%s/%s", ZK_ROOT_PATH, serverInfo);
+            String zkNodePath = buildZkNodePath(serverInfo);
             HashMap<String, Metadata> allMetadata = hashRing.getAllMetadata();
             AdminMessage msg = new AdminMessage(MessageType.INIT, allMetadata, null);
 
             try {
+                logger.debug(String.format("Setting up node at path: %s", zkNodePath));
+
                 while (zk.exists(zkNodePath, false) == null) {
                     awaitNodes(count, ZK_TIMEOUT);
                 }
@@ -264,14 +276,16 @@ public class ECSClient implements IECSClient {
 
         for (String serverInfo : unavailableServers) {
             serverStatusInfo.put(serverInfo, NodeStatus.ONLINE);
-            String zkNodePath = String.format("%s/%s", ZK_ROOT_PATH, serverInfo);
+            String zkNodePath = buildZkNodePath(serverInfo);
 
             try {
                 while (zk.exists(zkNodePath, false) == null) {
                     awaitNodes(1, ZK_TIMEOUT);
                 }
 
+                logger.debug(String.format("Setting data: %s", msg));
                 zk.setData(zkNodePath, msg.toBytes(), zk.exists(zkNodePath, false).getVersion());
+                logger.debug("Done setting data");
             } catch (Exception e) {
                 String errorMsg = String.format("Unable to start server: %s", serverInfo);
                 logger.error(errorMsg);
@@ -293,7 +307,7 @@ public class ECSClient implements IECSClient {
         for (String serverInfo : unavailableServers) {
             try {
                 serverStatusInfo.put(serverInfo, NodeStatus.IDLE);
-                String zkNodePath = String.format("%s/%s", ZK_ROOT_PATH, serverInfo);
+                String zkNodePath = buildZkNodePath(serverInfo);
                 zk.setData(zkNodePath, msg.toBytes(), zk.exists(zkNodePath, false).getVersion());
             } catch (Exception e) {
                 String errorMsg = String.format("Unable to stop server: %s", serverInfo);
@@ -317,7 +331,7 @@ public class ECSClient implements IECSClient {
             try {
                 serverStatusInfo.put(serverInfo, NodeStatus.OFFLINE);
                 hashRing.removeNode(serverInfo);
-                String zkNodePath = String.format("%s/%s", ZK_ROOT_PATH, serverInfo);
+                String zkNodePath = buildZkNodePath(serverInfo);
                 zk.setData(zkNodePath, msg.toBytes(), zk.exists(zkNodePath, false).getVersion());
             } catch (Exception e) {
                 String errorMsg = String.format("Unable to shutdown server: %s", serverInfo);
@@ -344,7 +358,7 @@ public class ECSClient implements IECSClient {
                 unavailableServers.remove(serverInfo);
 
                 AdminMessage msg = new AdminMessage(MessageType.SHUTDOWN, null, null);
-                String zkNodePath = String.format("%s/%s", ZK_ROOT_PATH, serverInfo);
+                String zkNodePath = buildZkNodePath(serverInfo);
 
                 if (zk.exists(zkNodePath, false) != null) {
                     zk.setData(zkNodePath, msg.toBytes(), zk.exists(zkNodePath, false).getVersion());
@@ -399,6 +413,12 @@ public class ECSClient implements IECSClient {
         return availableServers;
     }
 
+    /**
+     * Ensure number of servers user wishes to modify is valid.
+     * 
+     * @param count
+     * @return
+     */
     private boolean isServerCountValid(int count) {
         DebugHelper.logFuncEnter(logger);
         boolean isValid = true;
@@ -411,6 +431,38 @@ public class ECSClient implements IECSClient {
         DebugHelper.logFuncExit(logger);
 
         return isValid;
+    }
+
+    /**
+     * Extract just the server host and port from server info.
+     * 
+     * @param serverInfo <serverName>:<ip>:<port>
+     * @return ip:port
+     */
+    private String getHostAndPort(String serverInfo) {
+        DebugHelper.logFuncEnter(logger);
+        String[] serverInfoArray = serverInfo.split(":");
+        String host = serverInfoArray[1];
+        String port = serverInfoArray[2];
+        String serverHostAndPort = String.format("%s:%s", host, port);
+        DebugHelper.logFuncExit(logger);
+        return serverHostAndPort;
+    }
+
+    /**
+     * Build a ZooKeeper path for a node. Ensures compatibility between ECSClient
+     * and other components.
+     * 
+     * @param serverInfo serverName:ip:port
+     * @return
+     */
+    private String buildZkNodePath(String serverInfo) {
+        DebugHelper.logFuncEnter(logger);
+        String hostAndPort = getHostAndPort(serverInfo);
+        String zkNodePath = String.format("%s/%s", ZK_ROOT_PATH, hostAndPort);
+        logger.debug(String.format("Constructed zkNodePath: %s", zkNodePath));
+        DebugHelper.logFuncExit(logger);
+        return zkNodePath;
     }
 
     private void handleCommand(String cmdLine) throws Exception {

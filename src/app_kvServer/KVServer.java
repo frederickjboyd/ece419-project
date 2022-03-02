@@ -536,9 +536,9 @@ public class KVServer implements IKVServer, Runnable {
      *  Returns boolean for server mode (distributed or not)
      * @return True if distributed, False if non-distributed
      */
-    public boolean distributed(){
-		return distributedMode;
-	}
+    // public boolean distributed(){
+	// 	return distributedMode;
+	// }
 
     /**
      * Helper function to get current status of the server
@@ -585,6 +585,12 @@ public class KVServer implements IKVServer, Runnable {
         logger.info("RELEASE WRITE LOCK: Future write requests allowed for now!");
     }
 
+
+    @Override
+    public boolean getLockWrite(){ 
+		return locked;
+	}
+    
 
     // /**
     //  * Transfer a subset (range) of the KVServer’s data to another KVServer 
@@ -652,6 +658,7 @@ public class KVServer implements IKVServer, Runnable {
     //     // Release write lock
     //     unLockWrite();
     // }
+
 
 
     /**
@@ -773,6 +780,10 @@ public class KVServer implements IKVServer, Runnable {
         unLockWrite();
     }
 
+    public boolean distributed(){
+		return distributedMode;
+	}
+    
     /**
      * Send new admin message to destination servers
      * 

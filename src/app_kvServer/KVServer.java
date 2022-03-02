@@ -34,6 +34,7 @@ import java.math.BigInteger;
 import java.util.concurrent.CountDownLatch;
 import shared.communication.AdminMessage;
 import shared.communication.KVMessage;
+import shared.DebugHelper;
 import shared.Metadata;
 import shared.communication.AdminMessage.MessageType;
 
@@ -178,6 +179,8 @@ public class KVServer implements IKVServer, Runnable {
                     }
                 }
             });
+
+            logger.info("Succesfully initialized new ZooKeeper client on serverside!");
             // Blocks until current count reaches zero
             syncLatch.await();
         } catch (IOException | InterruptedException e) {
@@ -191,6 +194,9 @@ public class KVServer implements IKVServer, Runnable {
                 // Path, data, access control list (perms), znode type (ephemeral = delete upon
                 // client DC)
                 zoo.create(zooPathServer, new byte[0], ZooDefs.Ids.OPEN_ACL_UNSAFE, CreateMode.EPHEMERAL);
+
+                logger.info("Succesfully created ZNode on serverside!");
+
             }
         } catch (KeeperException | InterruptedException e) {
             logger.error("Failed to create ZK ZNode: ", e);
@@ -240,6 +246,7 @@ public class KVServer implements IKVServer, Runnable {
      * Helper function to handle ZK metadata and send to adminMessageHelper
      */
     public void handleMetadata() {
+        DebugHelper.logFuncEnter(logger);
         try {
             byte[] adminMessageBytes = zoo.getData(zooPathServer, new Watcher() {
                 @Override
@@ -260,13 +267,18 @@ public class KVServer implements IKVServer, Runnable {
                     }
                 }
             }, null);
+            
+            logger.info("Finished getting adminMessage in handleMetadata()!");
 
             ECSNode node = getECSNode(adminMessageBytes);
+
             // M2 Cache implementation - grab cache info from ECSNode
             this.cacheSize = node.getCacheSize();
             // TODO Check if this works to convert enum to string
             this.strategy = node.getCacheStrategy().name();
             this.cache = new kvCacheOperator(cacheSize, strategy);
+
+            logger.info("Finished getting cache info from metadata!");
 
             String adminMessageString = new String(adminMessageBytes, StandardCharsets.UTF_8);
             handleAdminMessageHelper(adminMessageString);
@@ -287,34 +299,36 @@ public class KVServer implements IKVServer, Runnable {
      * @return
      */
     public ECSNode getECSNode(byte [] adminMessageBytes){
-            // Process ECSNode
-            ByteArrayInputStream byteInputTest = null;
-            ObjectInputStream objectInputTest = null;
-            Object ECSObject = null;
+        DebugHelper.logFuncEnter(logger);
 
+        // Process ECSNode
+        ByteArrayInputStream byteInputTest = null;
+        ObjectInputStream objectInputTest = null;
+        Object ECSObject = null;
+
+        try {
+            byteInputTest = new ByteArrayInputStream(adminMessageBytes);
+            objectInputTest = new ObjectInputStream(byteInputTest);
+            ECSObject = objectInputTest.readObject();
+        } catch (IOException ioe) {
+            logger.error(ioe);
+        } catch (ClassNotFoundException cnfe) {
+            logger.error(cnfe);
+        } finally {
             try {
-                byteInputTest = new ByteArrayInputStream(adminMessageBytes);
-                objectInputTest = new ObjectInputStream(byteInputTest);
-                ECSObject = objectInputTest.readObject();
+                if (byteInputTest != null) {
+                    byteInputTest.close();
+                }
+                if (objectInputTest != null) {
+                    objectInputTest.close();
+                }
             } catch (IOException ioe) {
                 logger.error(ioe);
-            } catch (ClassNotFoundException cnfe) {
-                logger.error(cnfe);
-            } finally {
-                try {
-                    if (byteInputTest != null) {
-                        byteInputTest.close();
-                    }
-                    if (objectInputTest != null) {
-                        objectInputTest.close();
-                    }
-                } catch (IOException ioe) {
-                    logger.error(ioe);
-                }
             }
-    
-            ECSNode node = (ECSNode)ECSObject;
-            return node;
+        }
+
+        ECSNode node = (ECSNode)ECSObject;
+        return node;
     }
 
 
@@ -800,6 +814,8 @@ public class KVServer implements IKVServer, Runnable {
      * @throws InterruptedException
      */
     public void handleAdminMessageHelper(String adminMessageString) throws KeeperException, InterruptedException {
+        DebugHelper.logFuncEnter(logger);
+
         // Do Nothing if blank message
         if (adminMessageString == null || adminMessageString.equals("")) {
             return;
@@ -810,12 +826,16 @@ public class KVServer implements IKVServer, Runnable {
 
             // TODO - may need to block incoming requests, check this!
             if (incomingMessageType == MessageType.INIT) {
+                logger.info("Got admin message INIT!");
                 update(adminMessageString);
             } else if (incomingMessageType == MessageType.START) {
+                logger.info("Got admin message START!");
                 start();
             } else if (incomingMessageType == MessageType.STOP) {
+                logger.info("Got admin message STOP!");
                 stop();
             } else if (incomingMessageType == MessageType.SHUTDOWN) {
+                logger.info("Got admin message SHUTDOWN!");
                 shutDown();
             }
 
@@ -828,6 +848,7 @@ public class KVServer implements IKVServer, Runnable {
 
             // Incoming data transfer from another server
             else if (incomingMessageType == MessageType.TRANSFER_DATA) {
+                logger.info("Got admin message TRANSFER_DATA (receiving an incoming data transfer)!");
                 processDataTransfer(adminMessageString);
             }
 
@@ -838,6 +859,7 @@ public class KVServer implements IKVServer, Runnable {
 
             // Update metadata repository for this server, shift entries if needed
             else if (incomingMessageType == MessageType.UPDATE) {
+                logger.info("Got admin message UPDATE (update metadata)!");
                 update(adminMessageString);
             }
         }

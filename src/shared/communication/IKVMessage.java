@@ -1,9 +1,8 @@
 package shared.communication;
 
 public interface IKVMessage {
-
     /**
-     * Statuses for sending/receiving messages.
+     * Statuses for sending/receiving messages
      */
     public enum StatusType {
         GET, // Get - request
@@ -18,8 +17,6 @@ public interface IKVMessage {
         DISCONNECT, // Request to disconnect
         SERVER_NOT_RESPONSIBLE, // if the server didn't respond
         SERVER_WRITE_LOCK, // Write lock
-        SERVER_STOPPED, // when server stopped
-
+        SERVER_STOPPED // when server stopped
     }
-
 }

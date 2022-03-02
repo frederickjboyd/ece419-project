@@ -138,7 +138,7 @@ public class KVServer implements IKVServer, Runnable {
         // Running as distributed system
         this.distributedMode = true;
         // TODO Check: Start as stopped status
-        // this.status = ServerStatus.STOP;
+        this.status = ServerStatus.STOP;
         // Set server name
         this.name = name;
         // Write lock disabled
@@ -188,21 +188,6 @@ public class KVServer implements IKVServer, Runnable {
             logger.error("Failed to initialize ZooKeeper client: " + e);
         }
 
-        // Create new ZNode - see https://www.baeldung.com/java-zookeeper
-        try {
-            // The call to ZooKeeper.exists() checks for the existence of the znode
-            if (zoo.exists(zooPathServer, false) == null) {
-                // Path, data, access control list (perms), znode type (ephemeral = delete upon
-                // client DC)
-                zoo.create(zooPathServer, new byte[0], ZooDefs.Ids.OPEN_ACL_UNSAFE, CreateMode.PERSISTENT);
-
-                logger.info("Succesfully created ZNode on serverside at zooPathServer: " + zooPathServer);
-
-            }
-        } catch (KeeperException | InterruptedException e) {
-            logger.error("Failed to create ZK ZNode: ", e);
-        }
-
         // Handle metadata
         handleMetadata();
 
@@ -241,6 +226,8 @@ public class KVServer implements IKVServer, Runnable {
         // // Start main thread
         // newThread = new Thread(this);
         // newThread.start();
+
+        this.run();
     }
 
     /**
@@ -283,6 +270,22 @@ public class KVServer implements IKVServer, Runnable {
 
             String adminMessageString = new String(adminMessageBytes, StandardCharsets.UTF_8);
             handleAdminMessageHelper(adminMessageString);
+
+
+            // Create new ZNode - see https://www.baeldung.com/java-zookeeper
+            try {
+                // The call to ZooKeeper.exists() checks for the existence of the znode
+                if (zoo.exists(zooPathServer, false) == null) {
+                    // Path, data, access control list (perms), znode type (ephemeral = delete upon
+                    // client DC)
+                    zoo.create(zooPathServer, new byte[0], ZooDefs.Ids.OPEN_ACL_UNSAFE, CreateMode.PERSISTENT);
+
+                    logger.info("Succesfully created ZNode on serverside at zooPathServer: " + zooPathServer);
+
+                }
+            } catch (KeeperException | InterruptedException e) {
+                logger.error("Failed to create ZK ZNode: ", e);
+            }
 
             syncLatch.await();
 

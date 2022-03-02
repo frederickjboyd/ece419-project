@@ -830,9 +830,10 @@ public class KVServer implements IKVServer, Runnable {
         DebugHelper.logFuncEnter(logger);
         // Do Nothing if blank message
         if (adminMessageString == null || adminMessageString.equals("")) {
+            logger.error("handleAdminMessageHelper can do nothing - adminMessageString is null! Returning.");
             return;
         } else {
-            // TODO
+            logger.info("adminMessageString is not null, trying to handle admin message now...");
             AdminMessage incomingMessage = new AdminMessage(adminMessageString);
 
             // M2 Cache implementation - grab cache info from admin message

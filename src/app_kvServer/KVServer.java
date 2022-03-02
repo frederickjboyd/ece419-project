@@ -207,35 +207,37 @@ public class KVServer implements IKVServer, Runnable {
         handleMetadata();
 
         // try {
-        //     // Given path, do we need to watch node, stat of node
-        //     byte[] adminMessageBytes = zoo.getData(zooPathServer, new Watcher() {
-        //         // See https://zookeeper.apache.org/doc/r3.1.2/javaExample.html
-        //         public void process(WatchedEvent we) {
-        //             if (running == false) {
-        //                 return;
-        //             } else {
-        //                 try {
-        //                     String adminMessageString = new String(zoo.getData(zooPathServer, this, null), StandardCharsets.UTF_8);
-        //                     handleAdminMessageHelper(adminMessageString);
-        //                 } catch (KeeperException | InterruptedException e) {
-        //                     logger.error("Failed to process admin message: ", e);
-        //                 }
-        //             }
-        //         }
-        //     }, null);
-
-        //     ECSNode node = getECSNode(adminMessageBytes);
-        //     // M2 Cache implementation - grab cache info from ECSNode
-        //     this.cacheSize = node.getCacheSize();
-        //     // TODO Check if this works to convert enum to string
-        //     this.strategy = node.getCacheStrategy().name();
-        //     this.cache = new kvCacheOperator(cacheSize, strategy);
-
-        //     // Process the admin Message
-        //     String adminMessageString = new String(adminMessageBytes, StandardCharsets.UTF_8);
-        //     handleAdminMessageHelper(adminMessageString);
+        // // Given path, do we need to watch node, stat of node
+        // byte[] adminMessageBytes = zoo.getData(zooPathServer, new Watcher() {
+        // // See https://zookeeper.apache.org/doc/r3.1.2/javaExample.html
+        // public void process(WatchedEvent we) {
+        // if (running == false) {
+        // return;
+        // } else {
+        // try {
+        // String adminMessageString = new String(zoo.getData(zooPathServer, this,
+        // null), StandardCharsets.UTF_8);
+        // handleAdminMessageHelper(adminMessageString);
         // } catch (KeeperException | InterruptedException e) {
-        //     logger.error("Failed to process ZK metadata: ", e);
+        // logger.error("Failed to process admin message: ", e);
+        // }
+        // }
+        // }
+        // }, null);
+
+        // ECSNode node = getECSNode(adminMessageBytes);
+        // // M2 Cache implementation - grab cache info from ECSNode
+        // this.cacheSize = node.getCacheSize();
+        // // TODO Check if this works to convert enum to string
+        // this.strategy = node.getCacheStrategy().name();
+        // this.cache = new kvCacheOperator(cacheSize, strategy);
+
+        // // Process the admin Message
+        // String adminMessageString = new String(adminMessageBytes,
+        // StandardCharsets.UTF_8);
+        // handleAdminMessageHelper(adminMessageString);
+        // } catch (KeeperException | InterruptedException e) {
+        // logger.error("Failed to process ZK metadata: ", e);
         // }
 
         // // Start main thread
@@ -268,7 +270,7 @@ public class KVServer implements IKVServer, Runnable {
                     }
                 }
             }, null);
-            
+
             logger.info("Finished getting adminMessage in handleMetadata()!");
 
             // ECSNode node = getECSNode(adminMessageBytes);
@@ -293,13 +295,13 @@ public class KVServer implements IKVServer, Runnable {
         }
     }
 
-
     /**
      * Helper function to get ECS Node from admin message
+     * 
      * @param adminMessageBytes Input bytes of admin message
      * @return
      */
-    public ECSNode getECSNode(byte [] adminMessageBytes){
+    public ECSNode getECSNode(byte[] adminMessageBytes) {
         DebugHelper.logFuncEnter(logger);
 
         // Process ECSNode
@@ -328,10 +330,9 @@ public class KVServer implements IKVServer, Runnable {
             }
         }
 
-        ECSNode node = (ECSNode)ECSObject;
+        ECSNode node = (ECSNode) ECSObject;
         return node;
     }
-
 
     @Override
     public int getPort() {
@@ -383,8 +384,7 @@ public class KVServer implements IKVServer, Runnable {
     public boolean inCache(String key) {
         if (cache.cacheActiveStatus() == true) {
             return cache.inCache(key);
-        }
-        else{
+        } else {
             return false;
         }
     }
@@ -396,7 +396,7 @@ public class KVServer implements IKVServer, Runnable {
         if (cache.cacheActiveStatus() == true) {
             value = cache.getCache(key);
             // Value was in cache
-            if (value != null){
+            if (value != null) {
                 return value;
             }
         }
@@ -427,7 +427,7 @@ public class KVServer implements IKVServer, Runnable {
                 // Remove from cache as well
                 if (cache.cacheActiveStatus()) {
                     cache.delete(key);
-                }   
+                }
 
             } else {
                 logger.error("Tried to delete non-existent key: " + key);
@@ -533,12 +533,13 @@ public class KVServer implements IKVServer, Runnable {
     // ********************** Milestone 2 Modifications **********************
 
     /**
-     *  Returns boolean for server mode (distributed or not)
+     * Returns boolean for server mode (distributed or not)
+     * 
      * @return True if distributed, False if non-distributed
      */
     // public boolean distributed(){
-	// 	return distributedMode;
-	// }
+    // return distributedMode;
+    // }
 
     /**
      * Helper function to get current status of the server
@@ -585,81 +586,80 @@ public class KVServer implements IKVServer, Runnable {
         logger.info("RELEASE WRITE LOCK: Future write requests allowed for now!");
     }
 
-
     @Override
-    public boolean getLockWrite(){ 
-		return locked;
-	}
-    
+    public boolean getLockWrite() {
+        return locked;
+    }
 
     // /**
-    //  * Transfer a subset (range) of the KVServer’s data to another KVServer 
-    //  * (reallocation before removing this server or adding a new KVServer to the ring); 
-    //  * send a notification to the ECS, if data transfer is completed.
-    //  * 
-    //  * @param adminMessageString Admin message string from communications
-    //  */
+    // * Transfer a subset (range) of the KVServer’s data to another KVServer
+    // * (reallocation before removing this server or adding a new KVServer to the
+    // ring);
+    // * send a notification to the ECS, if data transfer is completed.
+    // *
+    // * @param adminMessageString Admin message string from communications
+    // */
     // @Override
     // public void moveData(String adminMessageString) {
-    //     // Process incoming admin message
-    //     AdminMessage incomingMessage = new AdminMessage(adminMessageString);
-    //     Map<String, Metadata> incomingMetadataMap = incomingMessage.getMsgMetadata();
-    //     Metadata incomingMetadata = incomingMetadataMap.get(hashedName);
+    // // Process incoming admin message
+    // AdminMessage incomingMessage = new AdminMessage(adminMessageString);
+    // Map<String, Metadata> incomingMetadataMap = incomingMessage.getMsgMetadata();
+    // Metadata incomingMetadata = incomingMetadataMap.get(hashedName);
 
-    //     // ************ Move data to target server ************
+    // // ************ Move data to target server ************
 
-    //     // Original start
-    //     BigInteger originalBegin = localMetadata.getHashStart();
-    //     // Original Stop
-    //     BigInteger originalEnd = localMetadata.getHashStop();
+    // // Original start
+    // BigInteger originalBegin = localMetadata.getHashStart();
+    // // Original Stop
+    // BigInteger originalEnd = localMetadata.getHashStop();
 
-	// 	Map<String, String> invalidKVPairs = null;
-        
-    //     if (localMetadata != null && !localMetadata.stop.equals(incomingMetadata.stop)){
-	// 		BigInteger stop = serverMetadata.getHashStop;
-	// 		BigInteger newStop = serverMetadatasMap.get(stop.toString()).getHashStop;
-	// 		invalidKVPairs = hashReachable(stop, newStop);
-	// 	}
+    // Map<String, String> invalidKVPairs = null;
 
-    
-    //     // Acquire write lock
-    //     lockWrite();
-
-    //     // Get unreachable entries based on current hash range
-    //     Map<String, String> unreachableEntries = storage.hashUnreachable(begin, end);
-    //     // Iterate through unreachable entries
-    //     Iterator itr = unreachableEntries.entrySet().iterator();
-
-
-    //     // Get metadata of destination server
-    //     Metadata transferServerMetadata = allMetadata.get(end.toString());
-    //     // Build destination server name
-    //     String transferServerName = zooPathRoot + "/" + transferServerMetadata.getHost() + ":"
-    //             + transferServerMetadata.getPort();
-    //     try {
-    //         // Send admin message to destination
-    //         // Need to confirm enums in MessageType, if TRANSFER_DATA available
-    //         sendMessage(MessageType.TRANSFER_DATA, null, unreachableEntries, transferServerName);
-    //     } catch (InterruptedException | KeeperException e) {
-    //         logger.error("Failed to send admin message with unreachable entries: ", e);
-    //     }
-
-    //     // Remove unreachable KV Pairs from this server
-    //     while (itr.hasNext()) {
-    //         Map.Entry keyVal = (Map.Entry) itr.next();
-    //         String key = (String) keyVal.getKey();
-    //         if (!storage.keyValid(storage.MD5Hash(key), begin, end)) {
-    //             storage.delete(key);
-    //         } else {
-    //             logger.error("Failed to remove unreachable KV pair from disk - reachable conflict!");
-    //         }
-    //     }
-
-    //     // Release write lock
-    //     unLockWrite();
+    // if (localMetadata != null &&
+    // !localMetadata.stop.equals(incomingMetadata.stop)){
+    // BigInteger stop = serverMetadata.getHashStop;
+    // BigInteger newStop = serverMetadatasMap.get(stop.toString()).getHashStop;
+    // invalidKVPairs = hashReachable(stop, newStop);
     // }
 
+    // // Acquire write lock
+    // lockWrite();
 
+    // // Get unreachable entries based on current hash range
+    // Map<String, String> unreachableEntries = storage.hashUnreachable(begin, end);
+    // // Iterate through unreachable entries
+    // Iterator itr = unreachableEntries.entrySet().iterator();
+
+    // // Get metadata of destination server
+    // Metadata transferServerMetadata = allMetadata.get(end.toString());
+    // // Build destination server name
+    // String transferServerName = zooPathRoot + "/" +
+    // transferServerMetadata.getHost() + ":"
+    // + transferServerMetadata.getPort();
+    // try {
+    // // Send admin message to destination
+    // // Need to confirm enums in MessageType, if TRANSFER_DATA available
+    // sendMessage(MessageType.TRANSFER_DATA, null, unreachableEntries,
+    // transferServerName);
+    // } catch (InterruptedException | KeeperException e) {
+    // logger.error("Failed to send admin message with unreachable entries: ", e);
+    // }
+
+    // // Remove unreachable KV Pairs from this server
+    // while (itr.hasNext()) {
+    // Map.Entry keyVal = (Map.Entry) itr.next();
+    // String key = (String) keyVal.getKey();
+    // if (!storage.keyValid(storage.MD5Hash(key), begin, end)) {
+    // storage.delete(key);
+    // } else {
+    // logger.error("Failed to remove unreachable KV pair from disk - reachable
+    // conflict!");
+    // }
+    // }
+
+    // // Release write lock
+    // unLockWrite();
+    // }
 
     /**
      * Update metadata, move entries as required
@@ -716,12 +716,11 @@ public class KVServer implements IKVServer, Runnable {
             String key = (String) keyVal.getKey();
             if (!storage.keyValid(begin, end, storage.MD5Hash(key))) {
                 // Remove unreachable KV Pairs from disk
-                //storage.delete(key);
+                // storage.delete(key);
                 // Cached version
-                try{
+                try {
                     putKV(key, "");
-                }
-                catch(Exception e){
+                } catch (Exception e) {
                     logger.error("Failed to PUT from distributed server UPDATE: " + e);
                 }
             } else {
@@ -754,25 +753,23 @@ public class KVServer implements IKVServer, Runnable {
             // TODO - Check this logic
             if (entry.getValue().toString().equals("")) {
                 // No cache (old version)
-                //storage.delete(entry.getKey());
+                // storage.delete(entry.getKey());
                 // Cached version
                 // Cached version
-                try{
+                try {
                     putKV(entry.getKey().toString(), "");
-                }
-                catch(Exception e){
+                } catch (Exception e) {
                     logger.error("Failed to PUT DELETE incoming data transfer from distributed server: " + e);
                 }
             }
             // Write new entries to disk
             else {
                 // No cache (old version)
-                //storage.put(entry.getKey().toString(), entry.getValue().toString());
+                // storage.put(entry.getKey().toString(), entry.getValue().toString());
                 // Cached version
-                try{
+                try {
                     putKV(entry.getKey().toString(), entry.getValue().toString());
-                }
-                catch(Exception e){
+                } catch (Exception e) {
                     logger.error("Failed to PUT incoming data transfer from distributed server: " + e);
                 }
             }
@@ -781,10 +778,10 @@ public class KVServer implements IKVServer, Runnable {
         unLockWrite();
     }
 
-    public boolean distributed(){
-		return distributedMode;
-	}
-    
+    public boolean distributed() {
+        return distributedMode;
+    }
+
     /**
      * Send new admin message to destination servers
      * 
@@ -837,8 +834,9 @@ public class KVServer implements IKVServer, Runnable {
             AdminMessage incomingMessage = new AdminMessage(adminMessageString);
 
             // M2 Cache implementation - grab cache info from admin message
-            // If first time running handleAdminMessageHelper, cache hasn't been initialized yet..
-            if (this.strategy == null){
+            // If first time running handleAdminMessageHelper, cache hasn't been initialized
+            // yet..
+            if (this.strategy == null) {
                 logger.info("Trying to get cache info from metadata!");
                 Map<String, Metadata> cacheMetadataAll = incomingMessage.getMsgMetadata();
                 Metadata cacheMetdataLocal = cacheMetadataAll.get(name);
@@ -881,7 +879,7 @@ public class KVServer implements IKVServer, Runnable {
 
             // // Transfer a subset of data to another server
             // else if (incomingMessageType == MessageType.MOVE_DATA){
-            //     moveData(adminMessageString);
+            // moveData(adminMessageString);
             // }
 
             // Update metadata repository for this server, shift entries if needed
@@ -906,7 +904,8 @@ public class KVServer implements IKVServer, Runnable {
             new LogSetup("logs/server.log", Level.ALL);
             if (args.length != 3) {
                 System.out.println("Error! Invalid number of arguments!");
-                System.out.println("Usage: M1: Server <port> <cachesize> <cachetype>!\n M2: Server <name> <port> <host>");
+                System.out
+                        .println("Usage: M1: Server <port> <cachesize> <cachetype>!\n M2: Server <name> <port> <host>");
             } else {
                 // M1 Standard Server
                 try {

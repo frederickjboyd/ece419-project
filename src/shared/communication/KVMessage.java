@@ -1,5 +1,6 @@
 package shared.communication;
 
+import java.io.Serializable;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.security.InvalidParameterException;
@@ -17,7 +18,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Iterator;
 
-public class KVMessage implements IKVMessage {
+public class KVMessage implements IKVMessage, Serializable {
     private static Logger logger = Logger.getRootLogger();
 
     private static final int MAX_KEY_SIZE_BYTES = 20;

@@ -212,8 +212,11 @@ public class HashRing {
             int port = node.getNodePort();
             BigInteger hashStart = node.getNodeHashRange()[0];
             BigInteger hashStop = node.getNodeHashRange()[1];
-            Metadata nodeMetadata = new Metadata(host, port, hashStart, hashStop);
-            allMetadata.put(name, nodeMetadata);
+            CacheStrategy cacheStrategy = node.getCacheStrategy();
+            int cacheSize = node.getCacheSize();
+            Metadata nodeMetadata = new Metadata(host, port, hashStart, hashStop, cacheStrategy, cacheSize);
+            String hostAndPort = String.format("%s:%s", host, port);
+            allMetadata.put(hostAndPort, nodeMetadata);
         }
 
         DebugHelper.logFuncExit(logger);

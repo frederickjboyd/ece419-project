@@ -194,7 +194,7 @@ public class KVServer implements IKVServer, Runnable {
             if (zoo.exists(zooPathServer, false) == null) {
                 // Path, data, access control list (perms), znode type (ephemeral = delete upon
                 // client DC)
-                zoo.create(zooPathServer, new byte[0], ZooDefs.Ids.OPEN_ACL_UNSAFE, CreateMode.EPHEMERAL);
+                zoo.create(zooPathServer, new byte[0], ZooDefs.Ids.OPEN_ACL_UNSAFE, CreateMode.PERSISTENT);
 
                 logger.info("Succesfully created ZNode on serverside!");
 
@@ -681,7 +681,8 @@ public class KVServer implements IKVServer, Runnable {
         // }
 
         // Update local metadata for this server
-        this.localMetadata = allMetadata.get(hashedName);
+        // Used to be MD5 hash of ip:port, now just ip:port
+        this.localMetadata = allMetadata.get(name);
 
         // ************ Move data to correct server ************
         BigInteger begin = localMetadata.getHashStart();
@@ -713,7 +714,7 @@ public class KVServer implements IKVServer, Runnable {
         while (itr.hasNext()) {
             Map.Entry keyVal = (Map.Entry) itr.next();
             String key = (String) keyVal.getKey();
-            if (!storage.keyValid(storage.MD5Hash(key), begin, end)) {
+            if (!storage.keyValid(begin, end, storage.MD5Hash(key))) {
                 // Remove unreachable KV Pairs from disk
                 //storage.delete(key);
                 // Cached version
@@ -838,12 +839,12 @@ public class KVServer implements IKVServer, Runnable {
             // If first time running handleAdminMessageHelper, cache hasn't been initialized yet..
             if (this.strategy == null){
                 logger.info("Trying to get cache info from metadata!");
-                Metadata cacheMetadata = incomingMessage.getMsgMetadata();
-                this.cacheSize = cacheMetadata.getCacheSize();
+                Map<String, Metadata> cacheMetadataAll = incomingMessage.getMsgMetadata();
+                this.cacheSize = cacheMetadataAll.get(name).getCacheSize();
                 // TODO Check if this works to convert enum to string
-                this.strategy = cacheMetadata.getCacheStrategy().name();
+                this.strategy = cacheMetadataAll.get(name).getCacheStrategy().name();
                 this.cache = new kvCacheOperator(cacheSize, strategy);
-                logger.info("Finished getting cache info from metadata!");
+                logger.info("Finished getting cache size, strategy from metadata! Size: " + this.cacheSize + "Strat: " + this.strategy);
             }
 
             // Now we check what type of message we got

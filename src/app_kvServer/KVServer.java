@@ -857,7 +857,7 @@ public class KVServer implements IKVServer, Runnable {
             new LogSetup("logs/server.log", Level.ALL);
             if (args.length != 3) {
                 System.out.println("Error! Invalid number of arguments!");
-                System.out.println("Usage: Server <port> <cachesize> <cachetype>!\n Server <name> <port> <host>");
+                System.out.println("Usage: M1: Server <port> <cachesize> <cachetype>!\n M2: Server <name> <port> <host>");
             } else {
                 // M1 Standard Server
                 try {
@@ -883,8 +883,8 @@ public class KVServer implements IKVServer, Runnable {
             e.printStackTrace();
             System.exit(1);
         } catch (NumberFormatException nfe) {
-            System.out.println("Error! Invalid argument <port>! Not a number!");
-            System.out.println("Usage: Server <port> <cachesize> <cachetype>!\n Server <name> <port> <host>");
+            System.out.println("Error! Invalid argument 2: Not a number!");
+            System.out.println("Usage: M1: Server <port> <cachesize> <cachetype>!\n M2: Server <name> <port> <host>");
             System.exit(1);
         }
     }

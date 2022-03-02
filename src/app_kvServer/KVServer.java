@@ -840,11 +840,12 @@ public class KVServer implements IKVServer, Runnable {
             if (this.strategy == null){
                 logger.info("Trying to get cache info from metadata!");
                 Map<String, Metadata> cacheMetadataAll = incomingMessage.getMsgMetadata();
-                this.cacheSize = cacheMetadataAll.get(name).getCacheSize();
+                Metadata cacheMetdataLocal = cacheMetadataAll.get(name);
+                this.cacheSize = cacheMetdataLocal.getCacheSize();
                 // TODO Check if this works to convert enum to string
-                this.strategy = cacheMetadataAll.get(name).getCacheStrategy().name();
+                this.strategy = cacheMetdataLocal.getCacheStrategy().name();
                 this.cache = new kvCacheOperator(cacheSize, strategy);
-                logger.info("Finished getting cache size, strategy from metadata! Size: " + this.cacheSize + "Strat: " + this.strategy);
+                logger.info("Finished getting cache size, strategy from metadata! Strat: " + this.strategy);
             }
 
             // Now we check what type of message we got

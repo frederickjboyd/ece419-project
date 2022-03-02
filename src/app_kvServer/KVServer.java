@@ -585,6 +585,12 @@ public class KVServer implements IKVServer, Runnable {
     }
 
 
+    @Override
+    public boolean getLockWrite(){ 
+		return locked;
+	}
+    
+
     // /**
     //  * Transfer a subset (range) of the KVServer’s data to another KVServer 
     //  * (reallocation before removing this server or adding a new KVServer to the ring); 
@@ -651,6 +657,7 @@ public class KVServer implements IKVServer, Runnable {
     //     // Release write lock
     //     unLockWrite();
     // }
+
 
 
     /**
@@ -772,6 +779,10 @@ public class KVServer implements IKVServer, Runnable {
         unLockWrite();
     }
 
+    public boolean distributed(){
+		return distributedMode;
+	}
+    
     /**
      * Send new admin message to destination servers
      * 

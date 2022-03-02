@@ -45,9 +45,10 @@ public class KVServer implements IKVServer, Runnable {
     private static Logger logger = Logger.getRootLogger();
 
     // M2 Cache implementation
+    // Set to unitialized values for now
     private int cacheSize;
-    private kvCacheOperator cache;
-    private String strategy;
+    private kvCacheOperator cache = null;
+    private String strategy = null;
 
     private int port;
     private ServerSocket serverSocket;
@@ -270,15 +271,15 @@ public class KVServer implements IKVServer, Runnable {
             
             logger.info("Finished getting adminMessage in handleMetadata()!");
 
-            ECSNode node = getECSNode(adminMessageBytes);
+            // ECSNode node = getECSNode(adminMessageBytes);
 
-            // M2 Cache implementation - grab cache info from ECSNode
-            this.cacheSize = node.getCacheSize();
-            // TODO Check if this works to convert enum to string
-            this.strategy = node.getCacheStrategy().name();
-            this.cache = new kvCacheOperator(cacheSize, strategy);
+            // // M2 Cache implementation - grab cache info from ECSNode
+            // this.cacheSize = node.getCacheSize();
+            // // TODO Check if this works to convert enum to string
+            // this.strategy = node.getCacheStrategy().name();
+            // this.cache = new kvCacheOperator(cacheSize, strategy);
 
-            logger.info("Finished getting cache info from metadata!");
+            // logger.info("Finished getting cache info from metadata!");
 
             String adminMessageString = new String(adminMessageBytes, StandardCharsets.UTF_8);
             handleAdminMessageHelper(adminMessageString);
@@ -815,15 +816,27 @@ public class KVServer implements IKVServer, Runnable {
      */
     public void handleAdminMessageHelper(String adminMessageString) throws KeeperException, InterruptedException {
         DebugHelper.logFuncEnter(logger);
-
         // Do Nothing if blank message
         if (adminMessageString == null || adminMessageString.equals("")) {
             return;
         } else {
             // TODO
             AdminMessage incomingMessage = new AdminMessage(adminMessageString);
-            MessageType incomingMessageType = incomingMessage.getMsgType();
 
+            // M2 Cache implementation - grab cache info from admin message
+            // If first time running handleAdminMessageHelper, cache hasn't been initialized yet..
+            if (this.strategy == null){
+                logger.info("Trying to get cache info from metadata!");
+                Metadata cacheMetadata = incomingMessage.getMsgMetadata();
+                this.cacheSize = cacheMetadata.getCacheSize();
+                // TODO Check if this works to convert enum to string
+                this.strategy = cacheMetadata.getCacheStrategy().name();
+                this.cache = new kvCacheOperator(cacheSize, strategy);
+                logger.info("Finished getting cache info from metadata!");
+            }
+
+            // Now we check what type of message we got
+            MessageType incomingMessageType = incomingMessage.getMsgType();
             // TODO - may need to block incoming requests, check this!
             if (incomingMessageType == MessageType.INIT) {
                 logger.info("Got admin message INIT!");

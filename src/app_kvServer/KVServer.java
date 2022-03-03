@@ -192,40 +192,6 @@ public class KVServer implements IKVServer, Runnable {
         // Handle metadata
         handleMetadata();
 
-        // try {
-        // // Given path, do we need to watch node, stat of node
-        // byte[] adminMessageBytes = zoo.getData(zooPathServer, new Watcher() {
-        // // See https://zookeeper.apache.org/doc/r3.1.2/javaExample.html
-        // public void process(WatchedEvent we) {
-        // if (running == false) {
-        // return;
-        // } else {
-        // try {
-        // String adminMessageString = new String(zoo.getData(zooPathServer, this,
-        // null), StandardCharsets.UTF_8);
-        // handleAdminMessageHelper(adminMessageString);
-        // } catch (KeeperException | InterruptedException e) {
-        // logger.error("Failed to process admin message: ", e);
-        // }
-        // }
-        // }
-        // }, null);
-
-        // ECSNode node = getECSNode(adminMessageBytes);
-        // // M2 Cache implementation - grab cache info from ECSNode
-        // this.cacheSize = node.getCacheSize();
-        // // TODO Check if this works to convert enum to string
-        // this.strategy = node.getCacheStrategy().name();
-        // this.cache = new kvCacheOperator(cacheSize, strategy);
-
-        // // Process the admin Message
-        // String adminMessageString = new String(adminMessageBytes,
-        // StandardCharsets.UTF_8);
-        // handleAdminMessageHelper(adminMessageString);
-        // } catch (KeeperException | InterruptedException e) {
-        // logger.error("Failed to process ZK metadata: ", e);
-        // }
-
         // // Start main thread
         // newThread = new Thread(this);
         // newThread.start();
@@ -234,7 +200,7 @@ public class KVServer implements IKVServer, Runnable {
     }
 
     /**
-     * Version 2
+     * Version 2 - not working!
      * Helper function to handle ZK metadata and send to adminMessageHelper
      */
     public void handleMetadataImproved() {
@@ -334,67 +300,6 @@ public class KVServer implements IKVServer, Runnable {
         } catch (KeeperException | InterruptedException e) {
             logger.error("Failed to process ZK metadata: ", e);
         }
-
-        // try {
-        // byte[] adminMessageBytes = zoo.getData(zooPathServer, new Watcher() {
-        // @Override
-        // public void process(WatchedEvent we) {
-        // if (we.getType() == Event.EventType.None) {
-        // switch (we.getState()) {
-        // case Expired:
-        // syncLatch.countDown();
-        // break;
-        // }
-        // } else {
-        // try {
-        // // Try again
-        // handleMetadata();
-        // } catch (Exception e) {
-        // logger.error("Failed to process admin message bytes: ", e);
-        // }
-        // }
-        // }
-        // }, null);
-
-        // logger.info("Finished getting adminMessage in handleMetadata()!");
-
-        // // ECSNode node = getECSNode(adminMessageBytes);
-
-        // // // M2 Cache implementation - grab cache info from ECSNode
-        // // this.cacheSize = node.getCacheSize();
-        // // // TODO Check if this works to convert enum to string
-        // // this.strategy = node.getCacheStrategy().name();
-        // // this.cache = new kvCacheOperator(cacheSize, strategy);
-
-        // // logger.info("Finished getting cache info from metadata!");
-
-        // String adminMessageString = new String(adminMessageBytes,
-        // StandardCharsets.UTF_8);
-        // handleAdminMessageHelper(adminMessageString);
-
-        // // Create new ZNode - see https://www.baeldung.com/java-zookeeper
-        // try {
-        // // The call to ZooKeeper.exists() checks for the existence of the znode
-        // if (zoo.exists(zooPathServer, false) == null) {
-        // // Path, data, access control list (perms), znode type (ephemeral = delete
-        // upon
-        // // client DC)
-        // zoo.create(zooPathServer, new byte[0], ZooDefs.Ids.OPEN_ACL_UNSAFE,
-        // CreateMode.PERSISTENT);
-        // logger.info("Succesfully created ZNode on serverside at zooPathServer: " +
-        // zooPathServer);
-        // }
-        // } catch (KeeperException | InterruptedException e) {
-        // logger.error("Failed to create ZK ZNode: ", e);
-        // }
-
-        // syncLatch.await();
-
-        // } catch (KeeperException e1) {
-        // logger.error(e1);
-        // } catch (InterruptedException e2) {
-        // logger.error(e2);
-        // }
     }
 
     /**
@@ -822,7 +727,7 @@ public class KVServer implements IKVServer, Runnable {
         BigInteger begin = localMetadata.getHashStart();
         BigInteger end = localMetadata.getHashStop();
 
-        // Acquire write lock
+        // Acquire write lock - prevent further writing to this server since data is stale
         lockWrite();
 
         // Get unreachable entries based on current hash range
@@ -835,13 +740,49 @@ public class KVServer implements IKVServer, Runnable {
                 + transferServerMetadata.getPort();
         try {
             // Send admin message to destination
-            // Need to confirm enums in MessageType, if TRANSFER_DATA available
-            sendMessage(MessageType.TRANSFER_DATA, null, unreachableEntries, transferServerName);
+            // Message Type, metadata, data, to_server, from_server (allows recipient to send confirmation back later)
+            sendMessage(MessageType.TRANSFER_DATA, null, unreachableEntries, transferServerName, zooPathServer);
+            logger.info("Sent a TRANSFER_DATA request to: " + transferServerName+ " from " + zooPathServer);
         } catch (InterruptedException | KeeperException e) {
             logger.error("Failed to send admin message with unreachable entries: ", e);
         }
 
-        // TODO - need to receive confirmation of data transfer complete from ECSNode
+        // Don't release write lock until TRANSFER_DATA_COMPLETE comes back in
+        //unLockWrite();
+    }
+
+     /**
+     * Send new admin message to destination servers
+     * 
+     * @param type        Message type
+     * @param metadata    Metadata map to be sent
+     * @param data        New KV entries to be transfered
+     * @param toServer Name of destination server (full name: (root/host:port))
+     * @param fromServer Name of sender server (root/host:port)
+     * @throws KeeperException
+     * @throws InterruptedException
+     */
+    public void sendMessage(MessageType type, Map<String, Metadata> metadata, Map<String, String> data,
+            String toServer, String fromServer) throws KeeperException, InterruptedException {
+        AdminMessage toSend = new AdminMessage(type, metadata, data, fromServer);
+        zoo.setData(toServer, toSend.toBytes(), zoo.exists(toServer, false).getVersion());
+        logger.info("Sent KV Transfer Message to: " + toServer);
+    }
+
+
+    /**
+     * Target server responded with a confirmation that KV pairs have been transferred.
+     * Proceed to delete the unreachable KV pairs from this current server
+     * @param adminMessageString Incoming admin message string
+     */
+    @Override
+    public void confirmDataTransfer(String adminMessageString){
+        BigInteger begin = localMetadata.getHashStart();
+        BigInteger end = localMetadata.getHashStop();
+
+        // Get unreachable entries based on current hash range
+        Map<String, String> unreachableEntries = storage.hashUnreachable(begin, end);
+
         // Iterate through unreachable entries and remove from storage
         Iterator itr = unreachableEntries.entrySet().iterator();
 
@@ -850,19 +791,18 @@ public class KVServer implements IKVServer, Runnable {
             String key = (String) keyVal.getKey();
             if (!storage.keyValid(begin, end, storage.MD5Hash(key))) {
                 // Remove unreachable KV Pairs from disk
-                // storage.delete(key);
                 // Cached version
                 try {
                     putKV(key, "");
                 } catch (Exception e) {
-                    logger.error("Failed to PUT from distributed server UPDATE: " + e);
+                    logger.error("Failed to remove unreachable KV pair from disk after confirm data transfer: " + e);
                 }
             } else {
                 logger.error("Failed to remove unreachable KV pair from disk - reachable conflict!");
             }
         }
 
-        // Release write lock
+        // Release the write lock since data is now up to date
         unLockWrite();
     }
 
@@ -908,29 +848,27 @@ public class KVServer implements IKVServer, Runnable {
                 }
             }
         }
+
+        // Send confirmation message (data transfer complete) back to sender server
+        // Build destination server name
+        //String senderServerName = zooPathRoot + "/" + incomingMessage.getSendingServer();
+        String originServerName = incomingMessage.getSendingServer();
+
+        try {
+            // Send admin message to sender server
+            // Message type, metadata, data, to_server, from_server
+            sendMessage(MessageType.TRANSFER_DATA_COMPLETE, null, null, originServerName, zooPathServer);
+            logger.info("Sent a TRANSFER_DATA_COMPLETE to: " + originServerName + " from " + zooPathServer);
+        } catch (InterruptedException | KeeperException e) {
+            logger.error("Failed to send TRANSFER_DATA_COMPLETE admin message to sender server: ", e);
+        }
+
         // Release write lock
         unLockWrite();
     }
 
     public boolean distributed() {
         return distributedMode;
-    }
-
-    /**
-     * Send new admin message to destination servers
-     * 
-     * @param type        Message type
-     * @param metadata    Metadata map to be sent
-     * @param data        New KV entries to be transfered
-     * @param destination Name of destination server (full name: (root/host/port))
-     * @throws KeeperException
-     * @throws InterruptedException
-     */
-    public void sendMessage(MessageType type, Map<String, Metadata> metadata, Map<String, String> data,
-            String destination) throws KeeperException, InterruptedException {
-        AdminMessage toSend = new AdminMessage(type, metadata, data);
-        zoo.setData(destination, toSend.toBytes(), zoo.exists(destination, false).getVersion());
-        logger.info("Sent KV Transfer Message to: " + destination);
     }
 
     /**
@@ -997,31 +935,29 @@ public class KVServer implements IKVServer, Runnable {
             } else if (incomingMessageType == MessageType.SHUTDOWN) {
                 logger.info("Got admin message SHUTDOWN!");
                 shutDown();
+            } else if (incomingMessageType == MessageType.TRANSFER_DATA) {
+                // Handle incoming metadata transfer from another server
+                logger.info("Got admin message TRANSFER_DATA (receiving an incoming data transfer)!");
+                processDataTransfer(adminMessageString);
+            } else if (incomingMessageType == MessageType.TRANSFER_DATA_COMPLETE) {
+                // Handle incoming metadata transfer from another server
+                logger.info("Got admin message TRANSFER_DATA_COMPLETE (data transfer completed)!");
+                confirmDataTransfer(adminMessageString);
+            } else if (incomingMessageType == MessageType.UPDATE) {
+                // Update metadata repository for this server, shift entries to another server if needed
+                logger.info("Got admin message UPDATE (update metadata)!");
+                update(adminMessageString);
             }
-
             // else if (incomingMessageType == MessageType.LOCKWRITE){
             // lockWrite();
             // }
             // else if (incomingMessageType == MessageType.UNLOCKWRITE){
             // unLockWrite();
             // }
-
-            // Incoming data transfer from another server
-            else if (incomingMessageType == MessageType.TRANSFER_DATA) {
-                logger.info("Got admin message TRANSFER_DATA (receiving an incoming data transfer)!");
-                processDataTransfer(adminMessageString);
-            }
-
             // // Transfer a subset of data to another server
             // else if (incomingMessageType == MessageType.MOVE_DATA){
             // moveData(adminMessageString);
             // }
-
-            // Update metadata repository for this server, shift entries if needed
-            else if (incomingMessageType == MessageType.UPDATE) {
-                logger.info("Got admin message UPDATE (update metadata)!");
-                update(adminMessageString);
-            }
         }
     }
 

@@ -6,6 +6,7 @@ import app_kvServer.IKVServer.CacheStrategy;
 
 import java.math.BigInteger;
 import java.util.Collection;
+import java.util.List;
 
 import ecs.ECSNode;
 
@@ -38,7 +39,8 @@ public interface IECSClient {
      * 
      * @return array of strings, containing unique names of servers
      */
-    public Collection<ECSNode> setupNodes(int count, CacheStrategy cacheStrategy, int cacheSize);
+    public Collection<ECSNode> setupNodes(int count, CacheStrategy cacheStrategy, int cacheSize,
+            List<String> serversToSetup);
 
     /**
      * Wait for all nodes to report status or until timeout expires
@@ -81,7 +83,7 @@ public interface IECSClient {
      * @param nodeNames names of nodes to remove
      * @return true on success, false otherwise
      */
-    public boolean removeNodes(Collection<String> nodeNames);
+    public boolean removeNodes(List<String> nodeNames);
 
     /**
      * Get a map of all nodes

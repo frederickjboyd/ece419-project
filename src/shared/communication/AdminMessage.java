@@ -30,12 +30,48 @@ public class AdminMessage {
     private MessageType msgType;
     private Map<String, Metadata> msgMetadata;
     private Map<String, String> msgKeyValues;
+    private String sendingServer;
 
-    public AdminMessage(MessageType msgType, Map<String, Metadata> msgMetadata, Map<String, String> msgKeyValues) {
+    /**
+     * Construct AdminMessage for most tasks.
+     * 
+     * @param msgType Type of AdminMessage
+     */
+    public AdminMessage(MessageType msgType) {
+        DebugHelper.logFuncEnter(logger);
+        this.msgType = msgType;
+        DebugHelper.logFuncExit(logger);
+    }
+
+    /**
+     * Construct AdminMessage for most sending metadata.
+     * 
+     * @param msgType     Type of AdminMessage
+     * @param msgMetadata Metadata for all servers - keys are in ip:port format
+     */
+    public AdminMessage(MessageType msgType, Map<String, Metadata> msgMetadata) {
+        DebugHelper.logFuncEnter(logger);
+        this.msgType = msgType;
+        this.msgMetadata = msgMetadata;
+        DebugHelper.logFuncExit(logger);
+    }
+
+    /**
+     * Construct AdminMessage for data transfers.
+     * 
+     * @param msgType       Type of AdminMessage
+     * @param msgMetadata   Metadata for all servers - keys are in ip:port format
+     * @param msgKeyValues  Map of key-value pairs that may need to be transferred
+     * @param sendingServer Note which server is sending this message so that
+     *                      recipient can reply
+     */
+    public AdminMessage(MessageType msgType, Map<String, Metadata> msgMetadata, Map<String, String> msgKeyValues,
+            String sendingServer) {
         DebugHelper.logFuncEnter(logger);
         this.msgType = msgType;
         this.msgMetadata = msgMetadata;
         this.msgKeyValues = msgKeyValues;
+        this.sendingServer = sendingServer;
         DebugHelper.logFuncExit(logger);
     }
 
@@ -81,5 +117,9 @@ public class AdminMessage {
 
     public Map<String, String> getMsgKeyValue() {
         return this.msgKeyValues;
+    }
+
+    public String getSendingServer() {
+        return this.sendingServer;
     }
 }

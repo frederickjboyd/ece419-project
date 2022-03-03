@@ -43,7 +43,7 @@ import shared.Metadata;
  */
 public class ECSClient implements IECSClient {
     // Prevent external libraries from spamming console
-    private static Logger logger = Logger.getLogger(ECSClient.class);
+    public static Logger logger = Logger.getLogger(ECSClient.class);
     private static Level logLevel = Level.TRACE;
 
     private boolean running = false;
@@ -189,6 +189,7 @@ public class ECSClient implements IECSClient {
             // Randomly select a new, available server to add
             int randIdx = rand.nextInt(availableServers.size());
             String newServerInfo = availableServers.get(randIdx);
+            logger.debug(String.format("Adding server: %s", newServerInfo));
             serverStatusInfo.put(newServerInfo, NodeStatus.IDLE);
             unavailableServers.add(newServerInfo);
             availableServers.remove(newServerInfo);

@@ -81,7 +81,7 @@ public class KVStore {
         KVMessage kvmessageReceived = kvCommunication.receiveMessage();
         checkAndUpdateServer(kvmessageReceived, key);
 
-        return kvCommunication.receiveMessage();
+        return kvmessageReceived;
     }
 
     public KVMessage put(String key, String value) throws Exception {
@@ -91,7 +91,7 @@ public class KVStore {
         KVMessage kvmessageReceived = kvCommunication.receiveMessage();
         checkAndUpdateServer(kvmessageReceived, key);
 
-        return kvCommunication.receiveMessage();
+        return kvmessageReceived;
     }
 
     public void checkAndUpdateServer(KVMessage kvmessageReceived, String key) {

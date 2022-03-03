@@ -142,7 +142,7 @@ public class KVServer implements IKVServer, Runnable {
         // Set server name
         this.name = name;
         // Write lock disabled
-        this.locked = false;
+        this.locked = true;
         // Store list of client threads
         this.threadList = new ArrayList<Thread>();
         // Split server name to get port (provided in ipaddr:port format)
@@ -172,7 +172,7 @@ public class KVServer implements IKVServer, Runnable {
 
         // Initialize new zookeeper client
         try {
-            this.zoo = new ZooKeeper(zooHost + ":" + zooPort, 5000, new Watcher() {
+            this.zoo = new ZooKeeper(zooHost + ":" + zooPort, 20000, new Watcher() {
                 public void process(WatchedEvent we) {
                     if (we.getState() == KeeperState.SyncConnected) {
                         // Countdown latch if we succesfully connected
@@ -229,7 +229,7 @@ public class KVServer implements IKVServer, Runnable {
         // newThread = new Thread(this);
         // newThread.start();
 
-        this.run();
+        // this.run();
     }
 
     /**
@@ -237,65 +237,104 @@ public class KVServer implements IKVServer, Runnable {
      */
     public void handleMetadata() {
         DebugHelper.logFuncEnter(logger);
+        // Create new ZNode - see https://www.baeldung.com/java-zookeeper
         try {
+            // The call to ZooKeeper.exists() checks for the existence of the znode
+            if (zoo.exists(zooPathServer, false) == null) {
+                // Path, data, access control list (perms), znode type (ephemeral = delete upon
+                // client DC)
+                zoo.create(zooPathServer, new byte[0], ZooDefs.Ids.OPEN_ACL_UNSAFE, CreateMode.PERSISTENT);
+                logger.info("Succesfully created ZNode on serverside at zooPathServer: " + zooPathServer);
+            }
+        } catch (KeeperException | InterruptedException e) {
+            logger.error("Failed to create ZK ZNode: ", e);
+        }
+
+        try {
+            // Given path, do we need to watch node, stat of node
             byte[] adminMessageBytes = zoo.getData(zooPathServer, new Watcher() {
-                @Override
+                // See https://zookeeper.apache.org/doc/r3.1.2/javaExample.html
                 public void process(WatchedEvent we) {
-                    if (we.getType() == Event.EventType.None) {
-                        switch (we.getState()) {
-                            case Expired:
-                                syncLatch.countDown();
-                                break;
-                        }
+                    if (running == false) {
+                        return;
                     } else {
                         try {
-                            // Try again
-                            handleMetadata();
-                        } catch (Exception e) {
-                            logger.error("Failed to process admin message bytes: ", e);
+                            String adminMessageString = new String(zoo.getData(zooPathServer, this,
+                                    null), StandardCharsets.UTF_8);
+                            handleAdminMessageHelper(adminMessageString);
+                        } catch (KeeperException | InterruptedException e) {
+                            logger.error("Failed to process admin message: ", e);
                         }
                     }
                 }
             }, null);
 
-            logger.info("Finished getting adminMessage in handleMetadata()!");
-
-            // ECSNode node = getECSNode(adminMessageBytes);
-
-            // // M2 Cache implementation - grab cache info from ECSNode
-            // this.cacheSize = node.getCacheSize();
-            // // TODO Check if this works to convert enum to string
-            // this.strategy = node.getCacheStrategy().name();
-            // this.cache = new kvCacheOperator(cacheSize, strategy);
-
-            // logger.info("Finished getting cache info from metadata!");
-
-            String adminMessageString = new String(adminMessageBytes, StandardCharsets.UTF_8);
+            // Process the admin Message
+            String adminMessageString = new String(adminMessageBytes,
+                    StandardCharsets.UTF_8);
             handleAdminMessageHelper(adminMessageString);
-
-
-            // Create new ZNode - see https://www.baeldung.com/java-zookeeper
-            try {
-                // The call to ZooKeeper.exists() checks for the existence of the znode
-                if (zoo.exists(zooPathServer, false) == null) {
-                    // Path, data, access control list (perms), znode type (ephemeral = delete upon
-                    // client DC)
-                    zoo.create(zooPathServer, new byte[0], ZooDefs.Ids.OPEN_ACL_UNSAFE, CreateMode.PERSISTENT);
-
-                    logger.info("Succesfully created ZNode on serverside at zooPathServer: " + zooPathServer);
-
-                }
-            } catch (KeeperException | InterruptedException e) {
-                logger.error("Failed to create ZK ZNode: ", e);
-            }
-
-            syncLatch.await();
-
-        } catch (KeeperException e1) {
-            logger.error(e1);
-        } catch (InterruptedException e2) {
-            logger.error(e2);
+        } catch (KeeperException | InterruptedException e) {
+            logger.error("Failed to process ZK metadata: ", e);
         }
+
+
+        // try {
+        //     byte[] adminMessageBytes = zoo.getData(zooPathServer, new Watcher() {
+        //         @Override
+        //         public void process(WatchedEvent we) {
+        //             if (we.getType() == Event.EventType.None) {
+        //                 switch (we.getState()) {
+        //                     case Expired:
+        //                         syncLatch.countDown();
+        //                         break;
+        //                 }
+        //             } else {
+        //                 try {
+        //                     // Try again
+        //                     handleMetadata();
+        //                 } catch (Exception e) {
+        //                     logger.error("Failed to process admin message bytes: ", e);
+        //                 }
+        //             }
+        //         }
+        //     }, null);
+
+        //     logger.info("Finished getting adminMessage in handleMetadata()!");
+
+        //     // ECSNode node = getECSNode(adminMessageBytes);
+
+        //     // // M2 Cache implementation - grab cache info from ECSNode
+        //     // this.cacheSize = node.getCacheSize();
+        //     // // TODO Check if this works to convert enum to string
+        //     // this.strategy = node.getCacheStrategy().name();
+        //     // this.cache = new kvCacheOperator(cacheSize, strategy);
+
+        //     // logger.info("Finished getting cache info from metadata!");
+
+        //     String adminMessageString = new String(adminMessageBytes, StandardCharsets.UTF_8);
+        //     handleAdminMessageHelper(adminMessageString);
+
+
+        //     // Create new ZNode - see https://www.baeldung.com/java-zookeeper
+        //     try {
+        //         // The call to ZooKeeper.exists() checks for the existence of the znode
+        //         if (zoo.exists(zooPathServer, false) == null) {
+        //             // Path, data, access control list (perms), znode type (ephemeral = delete upon
+        //             // client DC)
+        //             zoo.create(zooPathServer, new byte[0], ZooDefs.Ids.OPEN_ACL_UNSAFE, CreateMode.PERSISTENT);
+        //             logger.info("Succesfully created ZNode on serverside at zooPathServer: " + zooPathServer);
+        //         }
+        //     } catch (KeeperException | InterruptedException e) {
+        //         logger.error("Failed to create ZK ZNode: ", e);
+        //     }
+
+        //     syncLatch.await();
+
+        // } catch (KeeperException e1) {
+        //     logger.error(e1);
+        // } catch (InterruptedException e2) {
+        //     logger.error(e2);
+        // }
     }
 
     /**
@@ -563,6 +602,8 @@ public class KVServer implements IKVServer, Runnable {
     @Override
     public void start() {
         status = ServerStatus.START;
+        // Unlock server for writing
+        locked = false;
         logger.info("Started the KVServer, all client requests and all ECS requests are processed.");
     }
 

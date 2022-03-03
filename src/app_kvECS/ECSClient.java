@@ -20,6 +20,7 @@ import java.util.Random;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.io.BufferedReader;
+import java.io.File;
 import java.io.FileReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
@@ -51,7 +52,7 @@ public class ECSClient implements IECSClient {
     private static final String PROMPT = "ECS> ";
     private HashMap<String, NodeStatus> serverStatusInfo = new HashMap<String, NodeStatus>();
     private HashRing hashRing;
-    private ArrayList<String> unavailableServers = new ArrayList<String>(); // Any servers that are not OFFLINE
+    private List<String> unavailableServers = new ArrayList<String>(); // Any servers that are not OFFLINE
     private HashMap<String, Process> runningServers = new HashMap<String, Process>();
 
     public static final String ZK_ROOT_PATH = "/zkRoot";
@@ -181,6 +182,7 @@ public class ECSClient implements IECSClient {
 
         CacheStrategy cacheStrategyEnum = CacheStrategy.valueOf(cacheStrategyStr.toUpperCase());
         List<ECSNode> nodesAdded = new ArrayList<ECSNode>();
+        List<String> serverInfoAdded = new ArrayList<String>();
         Random rand = new Random();
         List<String> availableServers = getAvailableServers();
         List<ECSNode> serversToAdd = new ArrayList<ECSNode>();
@@ -193,6 +195,7 @@ public class ECSClient implements IECSClient {
             serverStatusInfo.put(newServerInfo, NodeStatus.IDLE);
             unavailableServers.add(newServerInfo);
             availableServers.remove(newServerInfo);
+            serverInfoAdded.add(newServerInfo);
 
             // Add to hash ring
             if (hashRing.getHashRing().isEmpty()) {
@@ -226,21 +229,22 @@ public class ECSClient implements IECSClient {
             }
         }
 
-        setupNodes(count, cacheStrategyEnum, cacheSize);
+        setupNodes(count, cacheStrategyEnum, cacheSize, serverInfoAdded);
         DebugHelper.logFuncExit(logger);
 
         return nodesAdded;
     }
 
     @Override
-    public Collection<ECSNode> setupNodes(int count, CacheStrategy cacheStrategy, int cacheSize) {
+    public Collection<ECSNode> setupNodes(int count, CacheStrategy cacheStrategy, int cacheSize,
+            List<String> serversToSetup) {
         DebugHelper.logFuncEnter(logger);
 
         if (!isServerCountValid(count)) {
             return null;
         }
 
-        for (String serverInfo : unavailableServers) {
+        for (String serverInfo : serversToSetup) {
             String zkNodePath = buildZkNodePath(serverInfo);
             HashMap<String, Metadata> allMetadata = hashRing.getAllMetadata();
             AdminMessage msg = new AdminMessage(MessageType.INIT, allMetadata);
@@ -260,6 +264,12 @@ public class ECSClient implements IECSClient {
                 e.printStackTrace();
             }
         }
+
+        // Update metadata on pre-existing servers
+        List<String> serversToUpdate = new ArrayList<String>(unavailableServers);
+        logger.info(String.format("unavailableServers: %s", serversToUpdate));
+        serversToUpdate.removeAll(serversToSetup);
+        updateNodeMetadata(serversToUpdate);
 
         DebugHelper.logFuncExit(logger);
 
@@ -322,7 +332,9 @@ public class ECSClient implements IECSClient {
             try {
                 serverStatusInfo.put(serverInfo, NodeStatus.IDLE);
                 String zkNodePath = buildZkNodePath(serverInfo);
-                zk.setData(zkNodePath, msg.toBytes(), zk.exists(zkNodePath, false).getVersion());
+                if (zk.exists(zkNodePath, false) != null) {
+                    zk.setData(zkNodePath, msg.toBytes(), zk.exists(zkNodePath, false).getVersion());
+                }
             } catch (Exception e) {
                 String errorMsg = String.format("Unable to stop server: %s", serverInfo);
                 logger.error(errorMsg);
@@ -346,7 +358,9 @@ public class ECSClient implements IECSClient {
                 serverStatusInfo.put(serverInfo, NodeStatus.OFFLINE);
                 hashRing.removeNode(serverInfo);
                 String zkNodePath = buildZkNodePath(serverInfo);
-                zk.setData(zkNodePath, msg.toBytes(), zk.exists(zkNodePath, false).getVersion());
+                if (zk.exists(zkNodePath, false) != null) {
+                    zk.setData(zkNodePath, msg.toBytes(), zk.exists(zkNodePath, false).getVersion());
+                }
                 Process p = runningServers.remove(serverInfo);
                 logger.debug(String.format("Destroying process %s", p));
                 p.destroy();
@@ -365,8 +379,9 @@ public class ECSClient implements IECSClient {
     }
 
     @Override
-    public boolean removeNodes(Collection<String> nodeNames) {
+    public boolean removeNodes(List<String> nodeNames) {
         DebugHelper.logFuncEnter(logger);
+        logger.info(String.format("Removing nodes: %s", nodeNames));
 
         for (String serverInfo : nodeNames) {
             try {
@@ -387,21 +402,59 @@ public class ECSClient implements IECSClient {
             }
         }
 
+        // Update metadata on all remaining nodes
+        updateNodeMetadata(unavailableServers);
         DebugHelper.logFuncExit(logger);
 
         return false;
     }
 
     /**
-     * Remove all *.out files from each server's SSH session.
+     * Notify servers of updated metadata.
+     * 
+     * @param nodesToUpdate Servers to update in format serverName:ip:port
      */
-    private void cleanServerLogs() {
-        String rmLogs = "rm -f ~/ece419-project/logs/*.out";
-        try {
-            Process p = Runtime.getRuntime().exec(rmLogs);
-        } catch (Exception e) {
-            logger.error("Failed to delete server log files.");
-            e.printStackTrace();
+    private void updateNodeMetadata(List<String> serversToUpdate) {
+        DebugHelper.logFuncEnter(logger);
+        logger.info(String.format("Updating metadata on nodes: %s", serversToUpdate));
+        HashMap<String, Metadata> allMetadata = hashRing.getAllMetadata();
+        AdminMessage msg = new AdminMessage(MessageType.UPDATE, allMetadata);
+
+        for (String serverInfo : serversToUpdate) {
+            logger.debug(String.format("Sending UPDATE to node %s", serverInfo));
+            String zkNodePath = buildZkNodePath(serverInfo);
+
+            try {
+                if (zk.exists(zkNodePath, false) != null) {
+                    zk.setData(zkNodePath, msg.toBytes(), zk.exists(zkNodePath, false).getVersion());
+                }
+            } catch (Exception e) {
+                logger.error(String.format("Unable to send message via ZooKeeper to update metadata on node %s",
+                        zkNodePath));
+                e.printStackTrace();
+            }
+        }
+
+        DebugHelper.logFuncExit(logger);
+    }
+
+    /**
+     * Remove all *.out and *.log files from the log folder.
+     */
+    private void cleanLogs() {
+        File dir = new File("logs");
+        File fList[] = dir.listFiles();
+
+        for (int i = 0; i < fList.length; i++) {
+            String f = fList[i].toString();
+
+            if (f.endsWith(".out") || f.endsWith(".log")) {
+                boolean succ = new File(f).delete();
+
+                if (!succ) {
+                    logger.error(String.format("Unable to delete file %s", f));
+                }
+            }
         }
     }
 
@@ -562,9 +615,9 @@ public class ECSClient implements IECSClient {
                 removeNodes(serversToRemove);
                 break;
 
-            case "cleanserverlogs":
-                logger.info("Handling cleanserverlogs...");
-                cleanServerLogs();
+            case "cleanlogs":
+                logger.info("Handling cleanlogs...");
+                cleanLogs();
                 break;
 
             case "status":

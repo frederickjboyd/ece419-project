@@ -263,6 +263,7 @@ public class HashRing {
         DebugHelper.logFuncEnter(logger);
         final String FANCY_TEXT = "=======================================";
         System.out.println(FANCY_TEXT);
+        System.out.println();
 
         for (Map.Entry<BigInteger, ECSNode> set : hashRing.entrySet()) {
             BigInteger nodeID = set.getKey();

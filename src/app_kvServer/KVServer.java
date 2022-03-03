@@ -141,7 +141,7 @@ public class KVServer implements IKVServer, Runnable {
         this.status = ServerStatus.STOP;
         // Set server name
         this.name = name;
-        // Write lock disabled
+        // Write lock is enabled at beginning, since server is stopped
         this.locked = true;
         // Store list of client threads
         this.threadList = new ArrayList<Thread>();
@@ -270,10 +270,10 @@ public class KVServer implements IKVServer, Runnable {
                 }
             }, null);
 
-            // Process the admin Message
-            String adminMessageString = new String(adminMessageBytes,
-                    StandardCharsets.UTF_8);
-            handleAdminMessageHelper(adminMessageString);
+            // // Process the admin Message
+            // String adminMessageString = new String(adminMessageBytes,
+            //         StandardCharsets.UTF_8);
+            // handleAdminMessageHelper(adminMessageString);
         } catch (KeeperException | InterruptedException e) {
             logger.error("Failed to process ZK metadata: ", e);
         }
@@ -591,6 +591,7 @@ public class KVServer implements IKVServer, Runnable {
      */
     @Override
     public ServerStatus getStatus() {
+        logger.info("*** Returning current server status: "+status.name());
         return status;
     }
 
@@ -613,6 +614,8 @@ public class KVServer implements IKVServer, Runnable {
     @Override
     public void stop() {
         status = ServerStatus.STOP;
+        // Reject client requests
+        locked = true;
         logger.info("Stopped the KVServer, all client requests are rejected and only ECS requests are processed.");
     }
 
@@ -948,7 +951,8 @@ public class KVServer implements IKVServer, Runnable {
         System.out.println("KVServer running!");
 
         try {
-            new LogSetup("logs/server.log", Level.ALL);
+            // TODO turn off logging temporarily for server
+            new LogSetup("logs/server.log", Level.OFF);
             if (args.length != 3) {
                 System.out.println("Error! Invalid number of arguments!");
                 System.out

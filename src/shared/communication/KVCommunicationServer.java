@@ -87,7 +87,7 @@ public class KVCommunicationServer extends KVCommunicationClient implements Runn
         KVMessage returnMsg = null;
 
         // Deny all KVMessages if server is stopped (only ECS permitted)
-        if (server.getStatus().name() == "STOP"){
+        if (server.getStatus().toString() == "STOP"){
             returnMsgType =  StatusType.SERVER_STOPPED;
             logger.info("Server is stopped - cannot process incoming client requests!");
             try {

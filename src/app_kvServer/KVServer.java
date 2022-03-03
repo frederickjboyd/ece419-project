@@ -233,7 +233,68 @@ public class KVServer implements IKVServer, Runnable {
         // this.run();
     }
 
-    /**
+
+
+    
+
+    /**Version 2
+     * Helper function to handle ZK metadata and send to adminMessageHelper
+     */
+    public void handleMetadataImproved() {
+        DebugHelper.logFuncEnter(logger);
+        try {
+            byte[] adminMessageBytes = zoo.getData(zooPathServer, new Watcher() {
+                @Override
+                public void process(WatchedEvent we) {
+                    if (we.getType() == Event.EventType.None) {
+                        switch (we.getState()) {
+                            case Expired:
+                                syncLatch.countDown();
+                                break;
+                        }
+                    } else {
+                        try {
+                            handleMetadataImproved();
+                        } catch (Exception ex) {
+                            System.out.println(ex.getMessage());
+                        }
+                    }
+                }
+            }, null);
+
+            String adminMessageString = new String(adminMessageBytes, StandardCharsets.UTF_8);
+            handleAdminMessageHelper(adminMessageString);
+
+            // Create new ZNode - see https://www.baeldung.com/java-zookeeper
+            if (zoo != null){
+                try {
+                    // The call to ZooKeeper.exists() checks for the existence of the znode
+                    if (zoo.exists(zooPathServer, false) == null) {
+                        // Path, data, access control list (perms), znode type (ephemeral = delete upon
+                        // client DC)
+                        byte[] data = this.name.getBytes();
+
+                        zoo.create(zooPathServer, data, ZooDefs.Ids.OPEN_ACL_UNSAFE, CreateMode.PERSISTENT);
+                        logger.info("Succesfully created ZNode on serverside at zooPathServer: " + zooPathServer);
+                    }
+                } catch (KeeperException | InterruptedException e) {
+                    logger.error("Failed to create ZK ZNode: ", e);
+                }
+            }
+
+            syncLatch.await();
+        } catch (KeeperException e1) {
+            logger.error(e1);
+        } catch (InterruptedException e2) {
+            logger.error(e2);
+        }
+    }
+
+
+
+
+
+    /**Version 1
      * Helper function to handle ZK metadata and send to adminMessageHelper
      */
     public void handleMetadata() {
@@ -260,8 +321,9 @@ public class KVServer implements IKVServer, Runnable {
                         return;
                     } else {
                         try {
-                            String adminMessageString = new String(zoo.getData(zooPathServer, this,
-                                    null), StandardCharsets.UTF_8);
+                            byte[] adminMessageBytes = zoo.getData(zooPathServer, this, null);
+                            String adminMessageString = new String(adminMessageBytes, StandardCharsets.UTF_8);
+                            logger.info("This is the incoming WATCHER admin message string: "+adminMessageString);
                             handleAdminMessageHelper(adminMessageString);
                         } catch (KeeperException | InterruptedException e) {
                             logger.error("Failed to process admin message: ", e);
@@ -270,10 +332,11 @@ public class KVServer implements IKVServer, Runnable {
                 }
             }, null);
 
-            // // Process the admin Message
-            // String adminMessageString = new String(adminMessageBytes,
-            //         StandardCharsets.UTF_8);
-            // handleAdminMessageHelper(adminMessageString);
+            // Process the admin Message
+            String adminMessageString = new String(adminMessageBytes,
+                    StandardCharsets.UTF_8);
+            logger.info("This is the incoming OUTER admin message string: "+adminMessageString);
+            handleAdminMessageHelper(adminMessageString);
         } catch (KeeperException | InterruptedException e) {
             logger.error("Failed to process ZK metadata: ", e);
         }
@@ -523,6 +586,7 @@ public class KVServer implements IKVServer, Runnable {
                             + client.getInetAddress().getHostName()
                             + " on port " + client.getPort());
                 } catch (IOException e) {
+                    // running = false;
                     logger.error("Error! " +
                             "Unable to establish connection. \n", e);
                 }
@@ -710,6 +774,34 @@ public class KVServer implements IKVServer, Runnable {
     // // Release write lock
     // unLockWrite();
     // }
+
+
+    /**
+     *  Initialize KV Server with initial metadata
+     * @param adminMeString Admin message from communications
+     */
+    public void initKVServer(String adminMessageString) {
+        // Process incoming admin message
+        AdminMessage incomingMessage = new AdminMessage(adminMessageString);
+
+        // TODO - check that getMsgTypeString is available
+        // String incomingMessageType = incomingMessage.getMsgTypeString()
+        // Update metadata map
+        this.allMetadata = incomingMessage.getMsgMetadata();
+
+        // for (String key: allMetadata.keySet()){
+        // Metadata metadata = allMetadata.get(key);
+        // }
+
+        // Update local metadata for this server
+        // Used to be MD5 hash of ip:port, now just ip:port
+        this.localMetadata = allMetadata.get(name);
+
+        // Set status to STOPPED - prevent client requests for now
+        this.status = ServerStatus.STOP;
+    }
+
+
 
     /**
      * Update metadata, move entries as required
@@ -899,10 +991,13 @@ public class KVServer implements IKVServer, Runnable {
 
             // Now we check what type of message we got
             MessageType incomingMessageType = incomingMessage.getMsgType();
+
+
+
             // TODO - may need to block incoming requests, check this!
             if (incomingMessageType == MessageType.INIT) {
                 logger.info("Got admin message INIT!");
-                update(adminMessageString);
+                initKVServer(adminMessageString);
             } else if (incomingMessageType == MessageType.START) {
                 logger.info("Got admin message START!");
                 start();
@@ -952,7 +1047,7 @@ public class KVServer implements IKVServer, Runnable {
 
         try {
             // TODO turn off logging temporarily for server
-            new LogSetup("logs/server.log", Level.OFF);
+            new LogSetup("logs/server.log", Level.ALL);
             if (args.length != 3) {
                 System.out.println("Error! Invalid number of arguments!");
                 System.out

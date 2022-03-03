@@ -243,7 +243,7 @@ public class ECSClient implements IECSClient {
         for (String serverInfo : unavailableServers) {
             String zkNodePath = buildZkNodePath(serverInfo);
             HashMap<String, Metadata> allMetadata = hashRing.getAllMetadata();
-            AdminMessage msg = new AdminMessage(MessageType.INIT, allMetadata, null);
+            AdminMessage msg = new AdminMessage(MessageType.INIT, allMetadata);
 
             try {
                 logger.debug(String.format("Setting up node at path: %s", zkNodePath));
@@ -286,7 +286,7 @@ public class ECSClient implements IECSClient {
     @Override
     public boolean start() throws Exception {
         DebugHelper.logFuncEnter(logger);
-        AdminMessage msg = new AdminMessage(MessageType.START, null, null);
+        AdminMessage msg = new AdminMessage(MessageType.START);
 
         for (String serverInfo : unavailableServers) {
             serverStatusInfo.put(serverInfo, NodeStatus.ONLINE);
@@ -316,7 +316,7 @@ public class ECSClient implements IECSClient {
     @Override
     public boolean stop() throws Exception {
         DebugHelper.logFuncEnter(logger);
-        AdminMessage msg = new AdminMessage(MessageType.STOP, null, null);
+        AdminMessage msg = new AdminMessage(MessageType.STOP);
 
         for (String serverInfo : unavailableServers) {
             try {
@@ -339,7 +339,7 @@ public class ECSClient implements IECSClient {
     @Override
     public boolean shutdown() throws Exception {
         DebugHelper.logFuncEnter(logger);
-        AdminMessage msg = new AdminMessage(MessageType.SHUTDOWN, null, null);
+        AdminMessage msg = new AdminMessage(MessageType.SHUTDOWN);
 
         for (String serverInfo : unavailableServers) {
             try {
@@ -374,7 +374,7 @@ public class ECSClient implements IECSClient {
                 hashRing.removeNode(serverInfo);
                 unavailableServers.remove(serverInfo);
 
-                AdminMessage msg = new AdminMessage(MessageType.SHUTDOWN, null, null);
+                AdminMessage msg = new AdminMessage(MessageType.SHUTDOWN);
                 String zkNodePath = buildZkNodePath(serverInfo);
 
                 if (zk.exists(zkNodePath, false) != null) {
@@ -390,6 +390,19 @@ public class ECSClient implements IECSClient {
         DebugHelper.logFuncExit(logger);
 
         return false;
+    }
+
+    /**
+     * Remove all *.out files from each server's SSH session.
+     */
+    private void cleanServerLogs() {
+        String rmLogs = "rm -f ~/ece419-project/logs/*.out";
+        try {
+            Process p = Runtime.getRuntime().exec(rmLogs);
+        } catch (Exception e) {
+            logger.error("Failed to delete server log files.");
+            e.printStackTrace();
+        }
     }
 
     @Override
@@ -547,6 +560,11 @@ public class ECSClient implements IECSClient {
                 }
 
                 removeNodes(serversToRemove);
+                break;
+
+            case "cleanserverlogs":
+                logger.info("Handling cleanserverlogs...");
+                cleanServerLogs();
                 break;
 
             case "status":

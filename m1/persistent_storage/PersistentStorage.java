@@ -22,7 +22,8 @@ public class PersistentStorage implements IPersistentStorage {
     private String databaseName = "database.properties";
     private File testFile;
 
-    /**Initializes the database properties file.
+    /**
+     * Initializes the database properties file.
      * Check if directory exists - if not, create it.
      * Check if data.properties file exists - if not, create it.
      */
@@ -55,7 +56,7 @@ public class PersistentStorage implements IPersistentStorage {
     }
 
     // NOTE: Java does not have optional arguments - overload instead
-    /**Build a map - no database existing on file.*/
+    /** Build a map - no database existing on file. */
     public PersistentStorage() {
         init();
         Map<String, String> tempMap = new HashMap<String, String>();
@@ -65,6 +66,7 @@ public class PersistentStorage implements IPersistentStorage {
 
     /**
      * Load existing map from storage.
+     * 
      * @param databaseName global database name
      */
     public PersistentStorage(String databaseName) {
@@ -106,7 +108,7 @@ public class PersistentStorage implements IPersistentStorage {
     // ldapContent.put(key, properties.get(key).toString());
     // }
 
-    /**Write the current map to disk */
+    /** Write the current map to disk */
     private synchronized void writeMap() {
         Properties properties = new Properties();
         // Loop through entries in current map
@@ -117,7 +119,7 @@ public class PersistentStorage implements IPersistentStorage {
         // Debug delete
         // System.out.println("***Show hash map right before writing");
         // for (Map.Entry<String, String> entry : this.referenceMap.entrySet()) {
-        //     System.out.println(entry.getKey() + ":" + entry.getValue());
+        // System.out.println(entry.getKey() + ":" + entry.getValue());
         // }
 
         // Try write to disk
@@ -128,9 +130,10 @@ public class PersistentStorage implements IPersistentStorage {
         }
     }
 
-
-    /** Put new key-val pair into local map, then call write to disk
-     * @param key Key to put entry under 
+    /**
+     * Put new key-val pair into local map, then call write to disk
+     * 
+     * @param key   Key to put entry under
      * @param value Value to store under the given key
      */
     @Override
@@ -146,7 +149,9 @@ public class PersistentStorage implements IPersistentStorage {
         }
     }
 
-    /** Get a value given a key
+    /**
+     * Get a value given a key
+     * 
      * @param key Search for value under this key
      */
     @Override
@@ -166,7 +171,9 @@ public class PersistentStorage implements IPersistentStorage {
         }
     }
 
-    /** Delete the given key and its entry from the map, then write to disk
+    /**
+     * Delete the given key and its entry from the map, then write to disk
+     * 
      * @param key Key to delete
      */
     @Override
@@ -182,12 +189,12 @@ public class PersistentStorage implements IPersistentStorage {
             // for (Map.Entry<String, String> entry : this.referenceMap.entrySet()) {
             // System.out.println(entry.getKey() + ":" + entry.getValue());
             // }
-            
+
             // Tried to delete something that doesn't have entries
             if (value == null) {
                 logger.info("Failed to delete key: " + key + " as no values exist");
                 return false;
-            } 
+            }
             // Delete was succesful, write to disk
             else {
                 writeMap();
@@ -200,7 +207,9 @@ public class PersistentStorage implements IPersistentStorage {
         }
     }
 
-    /** Check if key exists in our map, return true if found, false if not.
+    /**
+     * Check if key exists in our map, return true if found, false if not.
+     * 
      * @param key Key to search for
      */
     @Override

@@ -22,8 +22,6 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
 
-
-
 /**
  * Communication class with extra server-specific methods.
  */
@@ -114,8 +112,8 @@ public class KVCommunicationServer extends KVCommunicationClient implements Runn
                 break;
 
             case PUT:
-                if (server.distributed() && server.getLockWrite()){
-                    returnMsgType =  StatusType.SERVER_WRITE_LOCK;
+                if (server.distributed() && server.getLockWrite()) {
+                    returnMsgType = StatusType.SERVER_WRITE_LOCK;
                     logger.info("server is locked for writing");
 
                     try {
@@ -123,7 +121,7 @@ public class KVCommunicationServer extends KVCommunicationClient implements Runn
                     } catch (Exception e) {
                         logger.error(e.getMessage());
                     }
-                    
+
                     return returnMsg;
                 }
                 // check if server is responsible for this KV pair
@@ -204,7 +202,7 @@ public class KVCommunicationServer extends KVCommunicationClient implements Runn
         JSONObject metadataJson = new JSONObject();
         // Make it a json string as value for the ease of passing in in kvmsg class
         int i = 0;
-        for (Metadata metadataObj : updatedMetadata.values()){
+        for (Metadata metadataObj : updatedMetadata.values()) {
             JSONObject obj = new JSONObject();
             obj.put("host", metadataObj.getHost());
             obj.put("port", metadataObj.getPort());

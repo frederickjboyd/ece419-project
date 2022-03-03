@@ -233,11 +233,8 @@ public class KVServer implements IKVServer, Runnable {
         // this.run();
     }
 
-
-
-    
-
-    /**Version 2
+    /**
+     * Version 2
      * Helper function to handle ZK metadata and send to adminMessageHelper
      */
     public void handleMetadataImproved() {
@@ -266,7 +263,7 @@ public class KVServer implements IKVServer, Runnable {
             handleAdminMessageHelper(adminMessageString);
 
             // Create new ZNode - see https://www.baeldung.com/java-zookeeper
-            if (zoo != null){
+            if (zoo != null) {
                 try {
                     // The call to ZooKeeper.exists() checks for the existence of the znode
                     if (zoo.exists(zooPathServer, false) == null) {
@@ -290,11 +287,8 @@ public class KVServer implements IKVServer, Runnable {
         }
     }
 
-
-
-
-
-    /**Version 1
+    /**
+     * Version 1
      * Helper function to handle ZK metadata and send to adminMessageHelper
      */
     public void handleMetadata() {
@@ -323,7 +317,7 @@ public class KVServer implements IKVServer, Runnable {
                         try {
                             byte[] adminMessageBytes = zoo.getData(zooPathServer, this, null);
                             String adminMessageString = new String(adminMessageBytes, StandardCharsets.UTF_8);
-                            logger.info("This is the incoming WATCHER admin message string: "+adminMessageString);
+                            logger.info("This is the incoming WATCHER admin message string: " + adminMessageString);
                             handleAdminMessageHelper(adminMessageString);
                         } catch (KeeperException | InterruptedException e) {
                             logger.error("Failed to process admin message: ", e);
@@ -335,7 +329,7 @@ public class KVServer implements IKVServer, Runnable {
             // Process the admin Message
             String adminMessageString = new String(adminMessageBytes,
                     StandardCharsets.UTF_8);
-            logger.info("This is the incoming OUTER admin message string: "+adminMessageString);
+            logger.info("This is the incoming OUTER admin message string: " + adminMessageString);
             handleAdminMessageHelper(adminMessageString);
         } catch (KeeperException | InterruptedException e) {
             logger.error("Failed to process ZK metadata: ", e);
@@ -655,7 +649,7 @@ public class KVServer implements IKVServer, Runnable {
      */
     @Override
     public ServerStatus getStatus() {
-        logger.info("*** Returning current server status: "+status.name());
+        logger.info("*** Returning current server status: " + status.name());
         return status;
     }
 
@@ -775,9 +769,9 @@ public class KVServer implements IKVServer, Runnable {
     // unLockWrite();
     // }
 
-
     /**
-     *  Initialize KV Server with initial metadata
+     * Initialize KV Server with initial metadata
+     * 
      * @param adminMeString Admin message from communications
      */
     public void initKVServer(String adminMessageString) {
@@ -800,8 +794,6 @@ public class KVServer implements IKVServer, Runnable {
         // Set status to STOPPED - prevent client requests for now
         this.status = ServerStatus.STOP;
     }
-
-
 
     /**
      * Update metadata, move entries as required
@@ -992,8 +984,6 @@ public class KVServer implements IKVServer, Runnable {
             // Now we check what type of message we got
             MessageType incomingMessageType = incomingMessage.getMsgType();
 
-
-
             // TODO - may need to block incoming requests, check this!
             if (incomingMessageType == MessageType.INIT) {
                 logger.info("Got admin message INIT!");
@@ -1043,8 +1033,6 @@ public class KVServer implements IKVServer, Runnable {
      *             strategy at args[2]
      */
     public static void main(String[] args) throws IOException {
-        System.out.println("KVServer running!");
-
         try {
             // TODO turn off logging temporarily for server
             new LogSetup("logs/server.log", Level.ALL);

@@ -47,10 +47,12 @@ public class ECSClient implements IECSClient {
     private static Level logLevel = Level.TRACE;
 
     private boolean running = false;
+    private boolean zkServerRunning = false;
     private static final String PROMPT = "ECS> ";
-    private HashMap<String, NodeStatus> serverStatusInfo = new HashMap<>();
+    private HashMap<String, NodeStatus> serverStatusInfo = new HashMap<String, NodeStatus>();
     private HashRing hashRing;
     private ArrayList<String> unavailableServers = new ArrayList<String>(); // Any servers that are not OFFLINE
+    private HashMap<String, Process> runningServers = new HashMap<String, Process>();
 
     public static final String ZK_ROOT_PATH = "/zkRoot";
     private static final String ZK_CONF_PATH = "zoo.cfg";
@@ -59,6 +61,8 @@ public class ECSClient implements IECSClient {
     private static final int ZK_PORT = 2181;
     private static final String ZK_HOST = "localhost";
     private static final int ZK_TIMEOUT = 2000;
+    private Thread zkServer;
+    private ZooKeeperWatcher zkWatcher;
     private ZooKeeper zk;
 
     public ECSClient(String configPath) {
@@ -82,12 +86,12 @@ public class ECSClient implements IECSClient {
             hashRing = new HashRing();
 
             // Initialize ZooKeeper server
-            Thread zkServer = new Thread(new ZooKeeperServer());
+            zkServer = new Thread(new ZooKeeperServer());
             zkServer.start();
 
             // Initialize ZooKeeper client
             CountDownLatch latch = new CountDownLatch(1);
-            ZooKeeperWatcher zkWatcher = new ZooKeeperWatcher(latch);
+            zkWatcher = new ZooKeeperWatcher(latch);
             String connectString = String.format("%s:%s", ZK_HOST, ZK_PORT);
             zk = new ZooKeeper(connectString, ZK_TIMEOUT, zkWatcher);
             latch.await(); // Wait for client to initialize
@@ -109,16 +113,22 @@ public class ECSClient implements IECSClient {
      * Class to run ZooKeeper in a separate thread.
      */
     private class ZooKeeperServer implements Runnable {
+        public ZooKeeperServer() {
+            zkServerRunning = true;
+        }
+
         public void run() {
-            try {
-                // Initialize ZooKeeper
-                ServerConfig zkServerCfg = new ServerConfig();
-                zkServerCfg.parse(ZK_CONF_PATH);
-                ZooKeeperServerMain zkServerMain = new ZooKeeperServerMain();
-                zkServerMain.runFromConfig(zkServerCfg);
-            } catch (Exception e) {
-                logger.error("Unable to initialize ZooKeeper server.");
-                e.printStackTrace();
+            while (zkServerRunning) {
+                try {
+                    // Initialize ZooKeeper
+                    ServerConfig zkServerCfg = new ServerConfig();
+                    zkServerCfg.parse(ZK_CONF_PATH);
+                    ZooKeeperServerMain zkServerMain = new ZooKeeperServerMain();
+                    zkServerMain.runFromConfig(zkServerCfg);
+                } catch (Exception e) {
+                    logger.error("Unable to initialize ZooKeeper server.");
+                    e.printStackTrace();
+                }
             }
         }
     }
@@ -206,6 +216,9 @@ public class ECSClient implements IECSClient {
 
             try {
                 Process p = Runtime.getRuntime().exec(sshStart);
+                // Keep track so we can properly terminate later
+                logger.debug(String.format("Adding process %s to runningServers", p));
+                runningServers.put(newServerInfo, p);
             } catch (Exception e) {
                 logger.error("Unable to start or connect to KVServer.");
                 e.printStackTrace();
@@ -283,7 +296,7 @@ public class ECSClient implements IECSClient {
                     awaitNodes(1, ZK_TIMEOUT);
                 }
 
-                logger.debug(String.format("Setting data: %s", msg));
+                logger.debug(String.format("Setting data at %s: %s", zkNodePath, msg));
                 zk.setData(zkNodePath, msg.toBytes(), zk.exists(zkNodePath, false).getVersion());
                 logger.debug("Done setting data");
             } catch (Exception e) {
@@ -333,6 +346,9 @@ public class ECSClient implements IECSClient {
                 hashRing.removeNode(serverInfo);
                 String zkNodePath = buildZkNodePath(serverInfo);
                 zk.setData(zkNodePath, msg.toBytes(), zk.exists(zkNodePath, false).getVersion());
+                Process p = runningServers.remove(serverInfo);
+                logger.debug(String.format("Destroying process %s", p));
+                p.destroy();
             } catch (Exception e) {
                 String errorMsg = String.format("Unable to shutdown server: %s", serverInfo);
                 logger.error(errorMsg);
@@ -558,9 +574,12 @@ public class ECSClient implements IECSClient {
 
             case "quit":
                 logger.info("Handling quit...");
+                stop();
                 shutdown();
                 zk.close();
                 running = false;
+                zkServerRunning = false;
+                zkServer.stop();
                 break;
 
             default:
@@ -614,10 +633,10 @@ public class ECSClient implements IECSClient {
         sb.append(PROMPT);
         sb.append("::::::::::::::::::::::::::::::::");
         sb.append("::::::::::::::::::::::::::::::::\n");
-        sb.append(PROMPT).append("addnodes <num>");
+        sb.append(PROMPT).append("addnodes <num> <cacheStrategy> <cacheSize>");
         sb.append("\t Randomly choose <num> nodes from available machines and start them \n");
 
-        sb.append(PROMPT).append("addnode");
+        sb.append(PROMPT).append("addnode <cacheStrategy> <cacheSize>");
         sb.append("\t\t Create new KVServer and add it to the storage service at an arbitrary position \n");
 
         sb.append(PROMPT).append("start");
@@ -690,5 +709,7 @@ public class ECSClient implements IECSClient {
             e.printStackTrace();
             System.exit(1);
         }
+
+        System.exit(0);
     }
 }

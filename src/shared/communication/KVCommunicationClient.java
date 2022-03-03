@@ -116,6 +116,12 @@ public class KVCommunicationClient {
             if (out != null) {
                 out.close();
             }
+            if (objIn != null) {
+                objIn.close();
+            }
+            if (objOut != null) {
+                objOut.close();
+            }
 
             logger.info("Connection closed.");
         } catch (Exception e) {

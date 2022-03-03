@@ -3,6 +3,7 @@ package ecs;
 import org.apache.log4j.Logger;
 
 import app_kvServer.IKVServer.CacheStrategy;
+import app_kvECS.ECSClient;
 import shared.DebugHelper;
 import shared.Metadata;
 
@@ -16,7 +17,7 @@ import java.util.Map;
 import java.util.Set;
 
 public class HashRing {
-    private static Logger logger = Logger.getRootLogger();
+    private static Logger logger = ECSClient.logger;
 
     private HashMap<BigInteger, ECSNode> hashRing = new HashMap<>(); // MD5 hash -> node
 
@@ -34,11 +35,13 @@ public class HashRing {
         DebugHelper.logFuncEnter(logger);
         int hashRingSize = serverInfo.size();
         List<ECSNode> nodesAdded = new ArrayList<ECSNode>();
+        logger.debug(String.format("hashRingSize: %d", hashRingSize));
 
         // Add each node to hash ring
         for (int i = 0; i < hashRingSize; i++) {
             String info = serverInfo.get(i);
             ECSNode node = createECSNode(info, cacheStrategy, cacheSize);
+            logger.debug(String.format("Adding to hash ring: %d", node.getNodeID()));
             hashRing.put(node.getNodeID(), node);
             nodesAdded.add(node);
         }
@@ -57,17 +60,25 @@ public class HashRing {
 
     private void setNodeHashRange(int currNodeIdx, List<BigInteger> nodeIDsList, int hashRingSize) {
         DebugHelper.logFuncEnter(logger);
+        logger.debug(String.format("currNodeIdx: %d", currNodeIdx));
+        logger.debug(String.format("hashRingSize: %d", hashRingSize));
         BigInteger currNodeID = nodeIDsList.get(currNodeIdx);
+        logger.debug(String.format("currNodeID: %d", currNodeID));
 
         // Calculate hash range
         int prevNodeIdx = (currNodeIdx == 0) ? hashRingSize - 1 : currNodeIdx - 1;
         int nextNodeIdx = (currNodeIdx + 1) % hashRingSize;
         BigInteger nextNodeID = nodeIDsList.get(nextNodeIdx);
         BigInteger[] hashRange = { currNodeID, nextNodeID };
+        logger.debug(String.format("prev/nextNodeIdx: %s, %s", prevNodeIdx, nextNodeIdx));
+        logger.debug(String.format("nextNodeID: %s", nextNodeID));
+        logger.debug(String.format("hashRange: %d-%d", hashRange[0], hashRange[1]));
 
         // Set ring position and hash range info
         ECSNode currNode = hashRing.get(currNodeID);
         BigInteger prevNodeID = nodeIDsList.get(prevNodeIdx);
+        logger.debug(String.format("currNode: %s", currNode));
+        logger.debug(String.format("prevNodeID: %d", prevNodeID));
         currNode.setPrevNodeID(prevNodeID);
         currNode.setNextNodeID(nextNodeID);
         currNode.setNodeHashRange(hashRange);
@@ -98,6 +109,7 @@ public class HashRing {
         List<BigInteger> nodeIDsList = getSortedNodeIDs();
         int hashRingSize = getHashRingSize();
         int newNodeIdx = -1;
+        boolean added = false;
 
         for (int i = 0; i < hashRingSize; i++) {
             BigInteger currNodeID = nodeIDsList.get(i);
@@ -107,6 +119,7 @@ public class HashRing {
                 // newNodeID < currNodeID;
                 newNodeIdx = i;
                 nodeIDsList.add(newNodeIdx, newNodeID);
+                added = true;
                 break;
             } else if (isNewNodeIDLarger == 1) {
                 // newNodeID > currNodeID;
@@ -117,10 +130,24 @@ public class HashRing {
             }
         }
 
+        // Handle case where new node's ID is larger than all existing IDs in hash ring
+        if (!added) {
+            BigInteger currNodeID = nodeIDsList.get(hashRingSize - 1);
+            int isNewNodeIDLarger = newNodeID.compareTo(currNodeID);
+
+            if (isNewNodeIDLarger == 1) {
+                newNodeIdx = hashRingSize;
+                nodeIDsList.add(newNodeIdx, newNodeID);
+            } else {
+                logger.error(
+                        "Check placement of node IDs in hash ring. Seems like current node's ID is both larger and smaller than existing nodes.");
+            }
+        }
+
+        hashRing.put(newNodeID, node);
         setNodeHashRange(newNodeIdx, nodeIDsList, hashRingSize + 1);
 
         // Make previous and next nodes point to current node
-        hashRing.put(newNodeID, node);
         ECSNode prevNode = hashRing.get(node.getPrevNodeID());
         ECSNode nextNode = hashRing.get(node.getNextNodeID());
         prevNode.updateNodeIfBefore(newNodeID);

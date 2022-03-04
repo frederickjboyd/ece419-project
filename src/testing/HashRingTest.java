@@ -19,7 +19,6 @@ import ecs.ECSNode.NodeStatus;
 
 public class HashRingTest extends TestCase {
     private HashRing hashRingClass = new HashRing();
-    private HashMap<String, NodeStatus> serverInfo = new HashMap<>();
     private static final String CONFIG_PATH = "ecs.config";
     private HashMap<String, NodeStatus> serverStatusInfo = new HashMap<String, NodeStatus>();
 
@@ -36,19 +35,30 @@ public class HashRingTest extends TestCase {
         } catch (Exception e) {
             e.printStackTrace();
         }
-    }
 
-    @Test
-    public void testHashRingInit() {
-        // Convert keys of serverInfo to a string array
-        Set<String> serverInfoSet = serverInfo.keySet();
+        // Put server info in a list
+        Set<String> serverInfoSet = serverStatusInfo.keySet();
         List<String> serverInfoList = new ArrayList<String>(serverInfoSet);
 
         hashRingClass.initHashRing(serverInfoList, CacheStrategy.None, 0);
+    }
+
+    @Test
+    /**
+     * Check that size of hash ring matches number of possible servers.
+     */
+    public void testHashRingSize() {
+        HashMap<BigInteger, ECSNode> hashRing = hashRingClass.getHashRing();
+        assertTrue(hashRing.size() == serverStatusInfo.size());
+    }
+
+    @Test
+    public void testHashRingOrder() {
+        boolean orderValid = true;
         HashMap<BigInteger, ECSNode> hashRing = hashRingClass.getHashRing();
 
-        System.out.println(hashRing);
-
-        assertTrue(true);
+        for (BigInteger currNodeID : hashRing.keySet()) {
+            ECSNode currNode = hashRing.get(currNodeID);
+        }
     }
 }

@@ -296,11 +296,11 @@ public class KVServer implements IKVServer, Runnable {
                 }
             }, null);
 
-            // Process the admin Message
-            String adminMessageString = new String(adminMessageBytes,
-                    StandardCharsets.UTF_8);
-            logger.info("This is the incoming OUTER admin message string: " + adminMessageString);
-            handleAdminMessageHelper(adminMessageString);
+            // // Process the admin Message
+            // String adminMessageString = new String(adminMessageBytes,
+            //         StandardCharsets.UTF_8);
+            // logger.info("This is the incoming OUTER admin message string: " + adminMessageString);
+            // handleAdminMessageHelper(adminMessageString);
         } catch (KeeperException | InterruptedException e) {
             logger.error("Failed to process ZK metadata: ", e);
         }

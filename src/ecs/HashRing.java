@@ -14,8 +14,8 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.Set;
+import java.util.TreeSet;
 
 public class HashRing {
     private static Logger logger = ECSClient.logger;
@@ -227,7 +227,7 @@ public class HashRing {
         return hashBigInt;
     }
 
-    private String createStringToHash(String host, int port) {
+    public String createStringToHash(String host, int port) {
         return host + ":" + port;
     }
 
@@ -236,7 +236,7 @@ public class HashRing {
      * 
      * @return Sorted list of node IDs.
      */
-    private List<BigInteger> getSortedNodeIDs() {
+    public List<BigInteger> getSortedNodeIDs() {
         DebugHelper.logFuncEnter(logger);
         Set<BigInteger> nodeIDsSet = this.hashRing.keySet();
         List<BigInteger> nodeIDsList = new ArrayList<BigInteger>(nodeIDsSet);
@@ -252,7 +252,6 @@ public class HashRing {
 
         for (BigInteger serverID : hashRing.keySet()) {
             ECSNode node = hashRing.get(serverID);
-            String name = node.getNodeName();
             String host = node.getNodeHost();
             int port = node.getNodePort();
             BigInteger hashStart = node.getNodeHashRange()[0];
@@ -285,12 +284,13 @@ public class HashRing {
     public void printHashRingStatus() {
         DebugHelper.logFuncEnter(logger);
         final String FANCY_TEXT = "=======================================";
+        // Use TreeSet to order IDs
+        TreeSet<BigInteger> nodeIDsSet = new TreeSet<BigInteger>(hashRing.keySet());
         System.out.println(FANCY_TEXT);
         System.out.println();
 
-        for (Map.Entry<BigInteger, ECSNode> set : hashRing.entrySet()) {
-            BigInteger nodeID = set.getKey();
-            ECSNode node = set.getValue();
+        for (BigInteger nodeID : nodeIDsSet) {
+            ECSNode node = hashRing.get(nodeID);
 
             System.out.println(String.format("ID: %d", node.getNodeID()));
             System.out.println(String.format("Name: %s", node.getNodeName()));

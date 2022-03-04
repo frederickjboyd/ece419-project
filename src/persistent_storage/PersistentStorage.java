@@ -355,4 +355,32 @@ public class PersistentStorage implements IPersistentStorage {
         }
         return newTable;
     }
+
+        /**
+     * Grab KV Pairs from current server db and return
+     * 
+     * @return
+     */
+    public Map<String, String> returnAllEntries() {
+        // Load local map with existing entries in storage
+        Map<String, String> tempMap = new HashMap<String, String>();
+        Properties properties = new Properties();
+        try {
+            properties.load(new FileInputStream(this.directory + '/' + this.databaseName));
+            for (String key : properties.stringPropertyNames()) {
+                tempMap.put(key, properties.get(key).toString());
+            }
+        } catch (IOException e) {
+            logger.error("Failed to load existing properties file!", e);
+        }
+        // Activate synchronized map
+        Map<String, String> currentTable = Collections.synchronizedMap(tempMap);
+        Map<String, String> newTable = new HashMap<String, String>();
+        // If key is unreachable in current range, add to new table
+        for (Map.Entry keyValPair : currentTable.entrySet()) {
+            String key = (String) keyValPair.getKey();
+            newTable.put(key, (String) keyValPair.getValue());
+        }
+        return newTable;
+    }
 }

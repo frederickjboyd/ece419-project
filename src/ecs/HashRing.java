@@ -29,7 +29,7 @@ public class HashRing {
     /**
      * Initialize hash ring.
      * 
-     * @param serverInfo All server information, each in a <name>:<ip>:<port> format
+     * @param serverInfo All server information, each in a name:ip:port format
      */
     public List<ECSNode> initHashRing(List<String> serverInfo, CacheStrategy cacheStrategy, int cacheSize) {
         DebugHelper.logFuncEnter(logger);

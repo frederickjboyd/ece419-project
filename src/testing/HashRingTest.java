@@ -59,6 +59,10 @@ public class HashRingTest extends TestCase {
 
         for (BigInteger currNodeID : hashRing.keySet()) {
             ECSNode currNode = hashRing.get(currNodeID);
+            BigInteger prevNodeID = currNode.getPrevNodeID();
+            BigInteger nextNodeID = currNode.getNextNodeID();
+
+            // Check prevNodeID < currNodeID < nextNodeID
         }
     }
 }

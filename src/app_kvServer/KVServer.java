@@ -745,7 +745,7 @@ public class KVServer implements IKVServer, Runnable {
         ECSNode nextNode = localMetadata.getNextNode();
 
         // Get metadata of destination server
-        Metadata transferServerMetadata = allMetadata.get(nextNode.getNodeHost() + ":" + nextNode.getNodePort().toString());
+        Metadata transferServerMetadata = allMetadata.get(nextNode.getNodeHost() + ":" + nextNode.getNodePort());
         // Build destination server name
         String transferServerName = zooPathRoot + "/" + transferServerMetadata.getHost() + ":"
                 + transferServerMetadata.getPort();
@@ -776,6 +776,7 @@ public class KVServer implements IKVServer, Runnable {
     public void sendMessage(MessageType type, Map<String, Metadata> metadata, Map<String, String> data,
             String toServer, String fromServer) throws KeeperException, InterruptedException {
         AdminMessage toSend = new AdminMessage(type, metadata, data, fromServer);
+        logger.info("Admin Message sent with SENDING SERVER FIELD: " + toSend.getSendingServer());
         zoo.setData(toServer, toSend.toBytes(), zoo.exists(toServer, false).getVersion());
         logger.info("Sent KV Transfer Message to: " + toServer);
     }

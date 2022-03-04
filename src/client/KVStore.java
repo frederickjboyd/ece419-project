@@ -78,12 +78,13 @@ public class KVStore {
         KVMessage kvmessage = new KVMessage(StatusType.GET, key, "");
         kvCommunication.sendMessage(kvmessage);
         KVMessage kvmessageReceived = null;
+        kvmessageReceived = kvCommunication.receiveMessage();
 
-        try {
-            kvmessageReceived = kvCommunication.receiveMessage();
-        } catch (IOException e){
-            logger.error("get msg receive failed!", e);
-        }
+        // try {
+        //     kvmessageReceived = kvCommunication.receiveMessage();
+        // } catch (IOException e){
+        //     logger.error("get msg receive failed!", e);
+        // }
 
         checkAndUpdateServer(kvmessageReceived, key);
 

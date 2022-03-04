@@ -1,18 +1,49 @@
 package testing;
+import org.apache.log4j.Logger;
 
 import org.junit.Test;
+import java.util.List;
+import ecs.ECSNode;
 
 import client.KVStore;
 import junit.framework.TestCase;
 import shared.communication.KVMessage;
 import shared.communication.IKVMessage.StatusType;
+import app_kvECS.ECSClient;
 
 public class InteractionTest extends TestCase {
 
     private KVStore kvClient;
 
     public void setUp() {
-        kvClient = new KVStore("localhost", 50000);
+        Exception ex = null;
+        // CacheStrategy cacheStrategy = CacheStrategy.FIFO;
+        String cacheStrategy = "FIFO";
+
+        int cacheSize = 500;
+        String host;
+        int port;
+        int numServers = 5;
+        String ECSConfigPath = System.getProperty("user.dir") + "/ecs.config";
+
+        List<ECSNode> nodesAdded;
+        ECSClient ecs;
+
+        // List<ECSNode> nodesAdded = new ArrayList<ECSNode>()
+        ecs = new ECSClient(ECSConfigPath);
+        nodesAdded = ecs.addNodes(numServers, cacheStrategy, cacheSize);
+        try {
+            ecs.start();
+        } catch (Exception e) {
+            System.out.println("ECS Performance Test failed on ECSClient init: " + e);
+        }
+        
+        host = nodesAdded.get(0).getNodeHost();
+        port = nodesAdded.get(0).getNodePort();
+
+        // kvClient = new KVStore("localhost", 50000);
+        kvClient = new KVStore(host, port);
+
         try {
             kvClient.connect();
         } catch (Exception e) {
@@ -87,6 +118,8 @@ public class InteractionTest extends TestCase {
 
         KVMessage response = null;
         Exception ex = null;
+        // Logger logger = Logger.getRootLogger();
+
 
         try {
             kvClient.put(key, value);
@@ -94,6 +127,10 @@ public class InteractionTest extends TestCase {
 
         } catch (Exception e) {
             ex = e;
+            // logger.error(e.getMessage());
+            // System.out.println(12342);
+
+            System.out.println(response.getStatus().toString());
         }
 
         assertTrue(ex == null && response.getStatus() == StatusType.DELETE_SUCCESS);

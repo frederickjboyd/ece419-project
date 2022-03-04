@@ -478,7 +478,7 @@ public class ECSClient implements IECSClient {
      * 
      * @return List of servers that can be added
      */
-    private List<String> getAvailableServers() {
+    public List<String> getAvailableServers() {
         DebugHelper.logFuncEnter(logger);
         List<String> availableServers = new ArrayList<String>();
 

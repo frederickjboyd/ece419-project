@@ -715,16 +715,8 @@ public class KVServer implements IKVServer, Runnable {
     public void update(String adminMessageString) {
         // Process incoming admin message
         AdminMessage incomingMessage = new AdminMessage(adminMessageString);
-
-        // TODO - check that getMsgTypeString is available
-        // String incomingMessageType = incomingMessage.getMsgTypeString()
         // Update metadata map
         this.allMetadata = incomingMessage.getMsgMetadata();
-
-        // for (String key: allMetadata.keySet()){
-        // Metadata metadata = allMetadata.get(key);
-        // }
-
         // Update local metadata for this server
         // Used to be MD5 hash of ip:port, now just ip:port
         this.localMetadata = allMetadata.get(name);
@@ -733,10 +725,12 @@ public class KVServer implements IKVServer, Runnable {
         BigInteger begin = localMetadata.getHashStart();
         BigInteger end = localMetadata.getHashStop();
 
+        logger.info("UPDATED hash ranges! New Begin: " + begin.toString() + " New End: " + end.toString());
+
         // REMOVE NODE - Check if the hash start and stop are 0,0
         // If so, this is a REMOVE update and all entries should be transferred away
         // Server should be shutdown after receiving confirmation of transfer
-        if (begin == BigInteger.valueOf(0) && end == BigInteger.valueOf(0)){
+        if ((begin.compareTo(BigInteger.ZERO) == 0) && (end.compareTo(BigInteger.ZERO) == 0)){
             logger.info("**** REMOVE SERVER (0,0 hash range): KVServer marked as to be deleted!");
             this.toBeDeleted = true;
         }
@@ -747,8 +741,11 @@ public class KVServer implements IKVServer, Runnable {
         // Get unreachable entries based on current hash range
         Map<String, String> unreachableEntries = storage.hashUnreachable(begin, end);
 
+        // Get the next node
+        ECSNode nextNode = localMetadata.getNextNode();
+
         // Get metadata of destination server
-        Metadata transferServerMetadata = allMetadata.get(end.toString());
+        Metadata transferServerMetadata = allMetadata.get(nextNode.getNodeHost + ":" + nextNode.getNodePort.toString());
         // Build destination server name
         String transferServerName = zooPathRoot + "/" + transferServerMetadata.getHost() + ":"
                 + transferServerMetadata.getPort();

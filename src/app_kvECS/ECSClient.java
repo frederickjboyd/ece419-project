@@ -487,6 +487,27 @@ public class ECSClient implements IECSClient {
         }
     }
 
+    /**
+     * Stop/shutdown all nodes, threads, and ZooKeeper.
+     */
+    public void quit() {
+        DebugHelper.logFuncEnter(logger);
+
+        try {
+            stop();
+            shutdown();
+            zk.close();
+            running = false;
+            zkServerRunning = false;
+            zkServer.stop();
+        } catch (Exception e) {
+            logger.error("Unable to quit ECSClient");
+            e.printStackTrace();
+        }
+
+        DebugHelper.logFuncExit(logger);
+    }
+
     @Override
     public HashMap<BigInteger, ECSNode> getNodes() {
         DebugHelper.logFuncEnter(logger);
@@ -686,12 +707,7 @@ public class ECSClient implements IECSClient {
 
             case "quit":
                 logger.info("Handling quit...");
-                stop();
-                shutdown();
-                zk.close();
-                running = false;
-                zkServerRunning = false;
-                zkServer.stop();
+                quit();
                 break;
 
             default:

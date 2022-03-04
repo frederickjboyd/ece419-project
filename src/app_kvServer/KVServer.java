@@ -741,25 +741,31 @@ public class KVServer implements IKVServer, Runnable {
         // Get unreachable entries based on current hash range
         Map<String, String> unreachableEntries = storage.hashUnreachable(begin, end);
 
-        // Get the next node
-        ECSNode nextNode = localMetadata.getNextNode();
-
-        // Get metadata of destination server
-        Metadata transferServerMetadata = allMetadata.get(nextNode.getNodeHost() + ":" + nextNode.getNodePort());
-        // Build destination server name
-        String transferServerName = zooPathRoot + "/" + transferServerMetadata.getHost() + ":"
-                + transferServerMetadata.getPort();
-        try {
-            // Send admin message to destination
-            // Message Type, metadata, data, to_server, from_server (allows recipient to send confirmation back later)
-            sendMessage(MessageType.TRANSFER_DATA, null, unreachableEntries, transferServerName, zooPathServer);
-            logger.info("Sent a TRANSFER_DATA request to: " + transferServerName+ " from " + zooPathServer);
-        } catch (InterruptedException | KeeperException e) {
-            logger.error("Failed to send admin message with unreachable entries: ", e);
+        // If no unreachable entries, no need to transfer entries to successor
+        if (unreachableEntries == null || unreachableEntries.isEmpty()){
+            logger.info("No unreachable entries after hash range update..");
         }
+        // If there are unreachable entries, send them to the next node
+        else{
+            // Get the next node
+            ECSNode nextNode = localMetadata.getNextNode();
 
-        // Don't release write lock until TRANSFER_DATA_COMPLETE comes back in
-        //unLockWrite();
+            // Get metadata of destination server
+            Metadata transferServerMetadata = allMetadata.get(nextNode.getNodeHost() + ":" + nextNode.getNodePort());
+            // Build destination server name
+            String transferServerName = zooPathRoot + "/" + transferServerMetadata.getHost() + ":"
+                    + transferServerMetadata.getPort();
+            try {
+                // Send admin message to destination
+                // Message Type, metadata, data, to_server, from_server (allows recipient to send confirmation back later)
+                sendMessage(MessageType.TRANSFER_DATA, null, unreachableEntries, transferServerName, zooPathServer);
+                logger.info("Sent a TRANSFER_DATA request to: " + transferServerName+ " from " + zooPathServer);
+            } catch (InterruptedException | KeeperException e) {
+                logger.error("Failed to send admin message with unreachable entries: ", e);
+            }
+            // Don't release write lock until TRANSFER_DATA_COMPLETE comes back in
+            //unLockWrite();
+        }
     }
 
      /**

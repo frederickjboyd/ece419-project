@@ -227,7 +227,7 @@ public class HashRing {
         return hashBigInt;
     }
 
-    private String createStringToHash(String host, int port) {
+    public String createStringToHash(String host, int port) {
         return host + ":" + port;
     }
 
@@ -236,7 +236,7 @@ public class HashRing {
      * 
      * @return Sorted list of node IDs.
      */
-    private List<BigInteger> getSortedNodeIDs() {
+    public List<BigInteger> getSortedNodeIDs() {
         DebugHelper.logFuncEnter(logger);
         Set<BigInteger> nodeIDsSet = this.hashRing.keySet();
         List<BigInteger> nodeIDsList = new ArrayList<BigInteger>(nodeIDsSet);

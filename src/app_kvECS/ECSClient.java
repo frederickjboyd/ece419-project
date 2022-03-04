@@ -227,6 +227,12 @@ public class ECSClient implements IECSClient {
                 logger.error("Unable to start or connect to KVServer.");
                 e.printStackTrace();
             }
+
+            try {
+                awaitNodes(1, ZK_TIMEOUT);
+            } catch (Exception e) {
+                logger.error("awaitNodes failed");
+            }
         }
 
         setupNodes(count, cacheStrategyEnum, cacheSize, serverInfoAdded);
@@ -258,7 +264,9 @@ public class ECSClient implements IECSClient {
 
                 logger.trace(String.format("Setting data to node %s:", zkNodePath));
                 logger.trace(String.format("zk: %s", zk));
-                zk.setData(zkNodePath, msg.toBytes(), zk.exists(zkNodePath, false).getVersion());
+                if (zk.exists(zkNodePath, false) != null) {
+                    zk.setData(zkNodePath, msg.toBytes(), zk.exists(zkNodePath, false).getVersion());
+                }
             } catch (Exception e) {
                 logger.error("Unable to send admin message to node.");
                 e.printStackTrace();
@@ -308,7 +316,9 @@ public class ECSClient implements IECSClient {
                 }
 
                 logger.debug(String.format("Setting data at %s: %s", zkNodePath, msg));
-                zk.setData(zkNodePath, msg.toBytes(), zk.exists(zkNodePath, false).getVersion());
+                if (zk.exists(zkNodePath, false) != null) {
+                    zk.setData(zkNodePath, msg.toBytes(), zk.exists(zkNodePath, false).getVersion());
+                }
                 logger.debug("Done setting data");
             } catch (Exception e) {
                 String errorMsg = String.format("Unable to start server: %s", serverInfo);

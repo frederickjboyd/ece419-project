@@ -745,7 +745,7 @@ public class KVServer implements IKVServer, Runnable {
         ECSNode nextNode = localMetadata.getNextNode();
 
         // Get metadata of destination server
-        Metadata transferServerMetadata = allMetadata.get(nextNode.getNodeHost + ":" + nextNode.getNodePort.toString());
+        Metadata transferServerMetadata = allMetadata.get(nextNode.getNodeHost() + ":" + nextNode.getNodePort().toString());
         // Build destination server name
         String transferServerName = zooPathRoot + "/" + transferServerMetadata.getHost() + ":"
                 + transferServerMetadata.getPort();

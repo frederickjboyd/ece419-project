@@ -837,7 +837,7 @@ public class KVServer implements IKVServer, Runnable {
         AdminMessage incomingMessage = new AdminMessage(adminMessageString);
         // MessageType incomingMessageType = incomingMessage.getMsgType();
 
-        logger.info("Trying to process incoming data transfer!");
+        logger.info("Trying to process incoming data transfer from: " + incomingMessage.getSendingServer());
 
         // Acquire write lock
         lockWrite();

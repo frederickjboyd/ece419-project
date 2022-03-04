@@ -30,7 +30,7 @@ public class AdminMessage {
     private MessageType msgType;
     private Map<String, Metadata> msgMetadata;
     private Map<String, String> msgKeyValues;
-    private String sendingServer;
+    private String msgSendingServer;
 
     /**
      * Construct AdminMessage for most tasks.
@@ -66,12 +66,12 @@ public class AdminMessage {
      *                      recipient can reply
      */
     public AdminMessage(MessageType msgType, Map<String, Metadata> msgMetadata, Map<String, String> msgKeyValues,
-            String sendingServer) {
+            String msgSendingServer) {
         DebugHelper.logFuncEnter(logger);
         this.msgType = msgType;
         this.msgMetadata = msgMetadata;
         this.msgKeyValues = msgKeyValues;
-        this.sendingServer = sendingServer;
+        this.msgSendingServer = msgSendingServer;
         DebugHelper.logFuncExit(logger);
     }
 
@@ -79,7 +79,7 @@ public class AdminMessage {
         DebugHelper.logFuncEnter(logger);
 
         logger.debug(String.format("Constructing AdminMessage with %s", msg));
-        String[] tokens = msg.split(String.valueOf(SEP), 4);
+        String[] tokens = msg.split(String.valueOf(SEP));
         this.msgType = MessageType.valueOf(tokens[0].toUpperCase());
 
         Gson gson = new Gson();
@@ -87,6 +87,7 @@ public class AdminMessage {
         }.getType();
         this.msgMetadata = gson.fromJson(tokens[1], metadataMapType);
         this.msgKeyValues = gson.fromJson(tokens[2], Map.class);
+        this.msgSendingServer = gson.fromJson(tokens[3], String.class);
 
         DebugHelper.logFuncExit(logger);
     }
@@ -102,7 +103,8 @@ public class AdminMessage {
         String type = msgType.toString();
         String metadata = gson.toJson(msgMetadata);
         String keyValue = gson.toJson(msgKeyValues);
-        String msgString = type + SEP + metadata + SEP + keyValue;
+        String sendingServer = gson.toJson(msgSendingServer);
+        String msgString = type + SEP + metadata + SEP + keyValue + SEP + sendingServer;
 
         return msgString.getBytes(StandardCharsets.US_ASCII);
     }
@@ -120,6 +122,6 @@ public class AdminMessage {
     }
 
     public String getSendingServer() {
-        return this.sendingServer;
+        return this.msgSendingServer;
     }
 }

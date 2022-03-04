@@ -386,15 +386,24 @@ public class ECSClient implements IECSClient {
         for (String serverInfo : nodeNames) {
             try {
                 serverStatusInfo.put(serverInfo, NodeStatus.OFFLINE);
-                hashRing.removeNode(serverInfo);
-                unavailableServers.remove(serverInfo);
+                // Metadata still with node that is to be removed
+                HashMap<String, Metadata> allMetadataOld = hashRing.removeNode(serverInfo);
 
-                AdminMessage msg = new AdminMessage(MessageType.SHUTDOWN);
+                // Sent updated hash range to server
+                AdminMessage msg = new AdminMessage(MessageType.UPDATE, allMetadataOld);
                 String zkNodePath = buildZkNodePath(serverInfo);
 
                 if (zk.exists(zkNodePath, false) != null) {
                     zk.setData(zkNodePath, msg.toBytes(), zk.exists(zkNodePath, false).getVersion());
                 }
+
+                unavailableServers.remove(serverInfo);
+                // msg = new AdminMessage(MessageType.SHUTDOWN);
+
+                // if (zk.exists(zkNodePath, false) != null) {
+                // zk.setData(zkNodePath, msg.toBytes(), zk.exists(zkNodePath,
+                // false).getVersion());
+                // }
             } catch (Exception e) {
                 logger.error(String.format("Unable to remove server: %s", serverInfo));
                 e.printStackTrace();
@@ -449,6 +458,26 @@ public class ECSClient implements IECSClient {
             String f = fList[i].toString();
 
             if (f.endsWith(".out") || f.endsWith(".log")) {
+                boolean succ = new File(f).delete();
+
+                if (!succ) {
+                    logger.error(String.format("Unable to delete file %s", f));
+                }
+            }
+        }
+    }
+
+    /**
+     * Remove all *.properties files from the data folder.
+     */
+    private void cleanData() {
+        File dir = new File("data");
+        File fList[] = dir.listFiles();
+
+        for (int i = 0; i < fList.length; i++) {
+            String f = fList[i].toString();
+
+            if (f.endsWith(".out") || f.endsWith(".properties")) {
                 boolean succ = new File(f).delete();
 
                 if (!succ) {
@@ -620,6 +649,17 @@ public class ECSClient implements IECSClient {
                 cleanLogs();
                 break;
 
+            case "cleandata":
+                logger.info("Handling cleandata...");
+                cleanData();
+                break;
+
+            case "cleanall":
+                logger.info("Handling cleanall...");
+                cleanLogs();
+                cleanData();
+                break;
+
             case "status":
                 logger.info("Handling status...");
                 hashRing.printHashRingStatus();
@@ -730,6 +770,12 @@ public class ECSClient implements IECSClient {
 
         sb.append(PROMPT).append("cleanlogs");
         sb.append("\t\t\t\t\t Clean all *.out and *.log files from the logs folder \n");
+
+        sb.append(PROMPT).append("cleandata");
+        sb.append("\t\t\t\t\t Clean all *.properties files from the data folder \n");
+
+        sb.append(PROMPT).append("cleanall");
+        sb.append("\t\t\t\t\t Run all clean* commands \n");
 
         sb.append(PROMPT).append("logLevel");
         sb.append("\t\t\t\t\t changes the logLevel \n");

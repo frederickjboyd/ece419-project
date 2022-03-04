@@ -3,6 +3,7 @@ package shared;
 import java.math.BigInteger;
 
 import app_kvServer.IKVServer.CacheStrategy;
+import ecs.ECSNode;
 
 /**
  * Server-specific metadata.
@@ -14,6 +15,8 @@ public class Metadata {
     private BigInteger hashStop;
     private CacheStrategy cacheStrategy = CacheStrategy.None;
     private int cacheSize = 0;
+    private ECSNode prevNode;
+    private ECSNode nextNode;
 
     /**
      * Instantiate without cache information.
@@ -41,13 +44,15 @@ public class Metadata {
      * @param cacheSize
      */
     public Metadata(String host, Integer port, BigInteger hashStart, BigInteger hashStop, CacheStrategy cacheStrategy,
-            int cacheSize) {
+            int cacheSize, ECSNode prevNode, ECSNode nextNode) {
         this.host = host;
         this.port = port;
         this.hashStart = hashStart;
         this.hashStop = hashStop;
         this.cacheStrategy = cacheStrategy;
         this.cacheSize = cacheSize;
+        this.prevNode = prevNode;
+        this.nextNode = nextNode;
     }
 
     public String getHost() {
@@ -72,5 +77,13 @@ public class Metadata {
 
     public int getCacheSize() {
         return this.cacheSize;
+    }
+
+    public ECSNode getPrevNode() {
+        return this.prevNode;
+    }
+
+    public ECSNode getNextNode() {
+        return this.nextNode;
     }
 }

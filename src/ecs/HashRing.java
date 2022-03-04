@@ -10,6 +10,7 @@ import shared.Metadata;
 import java.math.BigInteger;
 import java.security.MessageDigest;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
@@ -165,7 +166,7 @@ public class HashRing {
         DebugHelper.logFuncExit(logger);
     }
 
-    public void removeNode(String serverInfo) {
+    public HashMap<String, Metadata> removeNode(String serverInfo) {
         DebugHelper.logFuncEnter(logger);
         String[] serverInfoArray = serverInfo.split(":");
         String host = serverInfoArray[1];
@@ -174,21 +175,38 @@ public class HashRing {
         String infoToHash = createStringToHash(host, port);
         BigInteger nodeID = hashServerInfo(infoToHash);
         ECSNode node = hashRing.get(nodeID);
-        removeNode(node);
+        HashMap<String, Metadata> allMetadataOld = removeNode(node);
         DebugHelper.logFuncExit(logger);
+
+        return allMetadataOld;
     }
 
-    public void removeNode(ECSNode node) {
+    public HashMap<String, Metadata> removeNode(ECSNode node) {
         DebugHelper.logFuncEnter(logger);
         ECSNode prevNode = hashRing.get(node.getPrevNodeID());
         BigInteger prevNodeID = node.getPrevNodeID();
         ECSNode nextNode = hashRing.get(node.getNextNodeID());
         BigInteger nextNodeID = node.getNextNodeID();
+        logger.debug(String.format("nextNode: %s:%s:%s", nextNode.getNodeName(), nextNode.getNodeHost(),
+                nextNode.getNodePort()));
+        // Next server is now responsible for current node's hash range
+        BigInteger[] nextNodeHashRange = nextNode.getNodeHashRange();
+        logger.debug(String.format("nextNode old hash range: %s", Arrays.toString(nextNodeHashRange)));
+        nextNodeHashRange[0] = node.getNodeHashRange()[0];
+        logger.debug(String.format("nextNode new hash range: %s", Arrays.toString(nextNodeHashRange)));
 
         prevNode.setNextNodeID(nextNodeID);
         nextNode.setPrevNodeID(prevNodeID);
+        nextNode.setNodeHashRange(nextNodeHashRange);
+        // To notify current server to transfer all data
+        BigInteger[] nodeNewHashRange = { BigInteger.valueOf(0), BigInteger.valueOf(0) };
+        node.setNodeHashRange(nodeNewHashRange);
+        // Grab metadata before removing node so it knows what to update
+        HashMap<String, Metadata> allMetadataOld = getAllMetadata();
+
         hashRing.remove(node.getNodeID());
         DebugHelper.logFuncExit(logger);
+        return allMetadataOld;
     }
 
     public BigInteger hashServerInfo(String info) {
@@ -241,7 +259,12 @@ public class HashRing {
             BigInteger hashStop = node.getNodeHashRange()[1];
             CacheStrategy cacheStrategy = node.getCacheStrategy();
             int cacheSize = node.getCacheSize();
-            Metadata nodeMetadata = new Metadata(host, port, hashStart, hashStop, cacheStrategy, cacheSize);
+            BigInteger prevNodeID = node.getPrevNodeID();
+            BigInteger nextNodeID = node.getNextNodeID();
+            ECSNode prevNode = hashRing.get(prevNodeID);
+            ECSNode nextNode = hashRing.get(nextNodeID);
+            Metadata nodeMetadata = new Metadata(host, port, hashStart, hashStop, cacheStrategy, cacheSize, prevNode,
+                    nextNode);
             String hostAndPort = String.format("%s:%s", host, port);
             allMetadata.put(hostAndPort, nodeMetadata);
         }
@@ -279,6 +302,7 @@ public class HashRing {
             BigInteger nextNodeID = node.getNextNodeID();
             String nextNodeName = hashRing.get(nextNodeID).getNodeName();
             System.out.println(String.format("nextNode: %s, %d", nextNodeName, nextNodeID));
+            System.out.println(String.format("hashRange: %s", Arrays.toString(node.getNodeHashRange())));
             System.out.println();
         }
 

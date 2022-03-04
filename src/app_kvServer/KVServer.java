@@ -83,7 +83,7 @@ public class KVServer implements IKVServer, Runnable {
 
     private Map<String, Metadata> allMetadata;
     private Metadata localMetadata;
-    
+
     // REMOVE NODE: Mark server as to be deleted.
     // Shutdown server once all data is transferred to successor node
     private boolean toBeDeleted = false;
@@ -727,46 +727,49 @@ public class KVServer implements IKVServer, Runnable {
 
         logger.info("UPDATED hash ranges! New Begin: " + begin.toString() + " New End: " + end.toString());
 
-        // Acquire write lock - prevent further writing to this server since data is stale
+        // Acquire write lock - prevent further writing to this server since data is
+        // stale
         lockWrite();
 
         // REMOVE NODE - Check if the hash start and stop are 0,0
         // If so, this is a REMOVE update and all entries should be transferred away
         // Server should be shutdown after receiving confirmation of transfer
-        if ((begin.compareTo(BigInteger.ZERO) == 0) && (end.compareTo(BigInteger.ZERO) == 0)){
+        if ((begin.compareTo(BigInteger.ZERO) == 0) && (end.compareTo(BigInteger.ZERO) == 0)) {
             logger.info("**** REMOVE SERVER (0,0 hash range): KVServer marked as to be deleted!");
             this.toBeDeleted = true;
 
             // Get all entries to be transferred
             Map<String, String> moveAllEntries = storage.returnAllEntries();
-            String unreachableEntriesString;
+            String unreachableEntriesString = null;
             for (Map.Entry<String, String> entry : moveAllEntries.entrySet()) {
-                unreachableEntriesString += (entry.getKey()  + '[' + entry.getValue() + ']');
+                unreachableEntriesString += (entry.getKey() + '[' + entry.getValue() + ']');
             }
             logger.info("Removing node! Move all entries: " + unreachableEntriesString);
 
             // If no unreachable entries, no need to transfer entries to successor
-            if (moveAllEntries == null || moveAllEntries.isEmpty()){
+            if (moveAllEntries == null || moveAllEntries.isEmpty()) {
                 logger.info("No unreachable entries in this TO BE REMOVED node!");
                 unLockWrite();
                 shutDown();
             }
 
             // Some entries need to be moved. Send message to successor node.
-            else{
+            else {
                 // Get the next node
                 ECSNode nextNode = localMetadata.getNextNode();
 
                 // Get metadata of destination server
-                Metadata transferServerMetadata = allMetadata.get(nextNode.getNodeHost() + ":" + nextNode.getNodePort());
+                Metadata transferServerMetadata = allMetadata
+                        .get(nextNode.getNodeHost() + ":" + nextNode.getNodePort());
                 // Build destination server name
                 String transferServerName = zooPathRoot + "/" + transferServerMetadata.getHost() + ":"
                         + transferServerMetadata.getPort();
                 try {
                     // Send admin message to destination
-                    // Message Type, metadata, data, to_server, from_server (allows recipient to send confirmation back later)
+                    // Message Type, metadata, data, to_server, from_server (allows recipient to
+                    // send confirmation back later)
                     sendMessage(MessageType.TRANSFER_DATA, null, moveAllEntries, transferServerName, zooPathServer);
-                    logger.info("Sent a TRANSFER_DATA request to: " + transferServerName+ " from " + zooPathServer);
+                    logger.info("Sent a TRANSFER_DATA request to: " + transferServerName + " from " + zooPathServer);
                 } catch (InterruptedException | KeeperException e) {
                     logger.error("Failed to send admin message with unreachable entries: ", e);
                 }
@@ -775,57 +778,56 @@ public class KVServer implements IKVServer, Runnable {
 
         // UPDATE WITHOUT REMOVING NODE
         // Check if there are any unreachable entries and move to appropriate server
-        else{
+        else {
             // Get unreachable entries based on current hash range
             Map<String, String> unreachableEntries = storage.hashUnreachable(begin, end);
-            String unreachableEntriesString;
+            String unreachableEntriesString = null;
             for (Map.Entry<String, String> entry : unreachableEntries.entrySet()) {
-                unreachableEntriesString += (entry.getKey()  + '[' + entry.getValue() + ']');
+                unreachableEntriesString += (entry.getKey() + '[' + entry.getValue() + ']');
             }
             logger.info("Updating metdata, not removing node. Move entries: " + unreachableEntriesString);
 
             // If no unreachable entries, no need to transfer entries to successor
-            if (unreachableEntries == null || unreachableEntries.isEmpty()){
+            if (unreachableEntries == null || unreachableEntries.isEmpty()) {
                 logger.info("No unreachable entries after hash range update..");
                 unLockWrite();
             }
             // If there are unreachable entries, send them to the next node
-            else{
+            else {
                 logger.info("Some unreachable entries found after hash range update..moving..");
 
                 // Get the next node
                 ECSNode nextNode = localMetadata.getNextNode();
 
                 // Get metadata of destination server
-                Metadata transferServerMetadata = allMetadata.get(nextNode.getNodeHost() + ":" + nextNode.getNodePort());
+                Metadata transferServerMetadata = allMetadata
+                        .get(nextNode.getNodeHost() + ":" + nextNode.getNodePort());
                 // Build destination server name
                 String transferServerName = zooPathRoot + "/" + transferServerMetadata.getHost() + ":"
                         + transferServerMetadata.getPort();
                 try {
                     // Send admin message to destination
-                    // Message Type, metadata, data, to_server, from_server (allows recipient to send confirmation back later)
+                    // Message Type, metadata, data, to_server, from_server (allows recipient to
+                    // send confirmation back later)
                     sendMessage(MessageType.TRANSFER_DATA, null, unreachableEntries, transferServerName, zooPathServer);
-                    logger.info("Sent a TRANSFER_DATA request to: " + transferServerName+ " from " + zooPathServer);
+                    logger.info("Sent a TRANSFER_DATA request to: " + transferServerName + " from " + zooPathServer);
                 } catch (InterruptedException | KeeperException e) {
                     logger.error("Failed to send admin message with unreachable entries: ", e);
                 }
                 // Don't release write lock until TRANSFER_DATA_COMPLETE comes back in
-                //unLockWrite();
+                // unLockWrite();
             }
         }
 
-
-
- 
     }
 
-     /**
+    /**
      * Send new admin message to destination servers
      * 
-     * @param type        Message type
-     * @param metadata    Metadata map to be sent
-     * @param data        New KV entries to be transfered
-     * @param toServer Name of destination server (full name: (root/host:port))
+     * @param type       Message type
+     * @param metadata   Metadata map to be sent
+     * @param data       New KV entries to be transfered
+     * @param toServer   Name of destination server (full name: (root/host:port))
      * @param fromServer Name of sender server (root/host:port)
      * @throws KeeperException
      * @throws InterruptedException
@@ -838,14 +840,15 @@ public class KVServer implements IKVServer, Runnable {
         logger.info("Sent KV Transfer Message to: " + toServer);
     }
 
-
     /**
-     * Target server responded with a confirmation that KV pairs have been transferred.
+     * Target server responded with a confirmation that KV pairs have been
+     * transferred.
      * Proceed to delete the unreachable KV pairs from this current server
+     * 
      * @param adminMessageString Incoming admin message string
      */
     @Override
-    public void confirmDataTransfer(String adminMessageString){
+    public void confirmDataTransfer(String adminMessageString) {
         BigInteger begin = localMetadata.getHashStart();
         BigInteger end = localMetadata.getHashStop();
 
@@ -874,7 +877,7 @@ public class KVServer implements IKVServer, Runnable {
         logger.info("Outgoing data transfer completed!");
 
         // If this server is being removed, shut it down for good
-        if (this.toBeDeleted){
+        if (this.toBeDeleted) {
             logger.info("*** Shutting down server after confirming outgoing data transfer complete!");
             clearStorage();
             shutDown();
@@ -931,7 +934,8 @@ public class KVServer implements IKVServer, Runnable {
 
         // Send confirmation message (data transfer complete) back to sender server
         // Build destination server name
-        //String senderServerName = zooPathRoot + "/" + incomingMessage.getSendingServer();
+        // String senderServerName = zooPathRoot + "/" +
+        // incomingMessage.getSendingServer();
         String originServerName = incomingMessage.getSendingServer();
         logger.info("Received and finished an incoming data transfer from: " + originServerName);
 
@@ -1025,7 +1029,8 @@ public class KVServer implements IKVServer, Runnable {
                 logger.info("Got admin message TRANSFER_DATA_COMPLETE (data transfer completed)!");
                 confirmDataTransfer(adminMessageString);
             } else if (incomingMessageType == MessageType.UPDATE) {
-                // Update metadata repository for this server, shift entries to another server if needed
+                // Update metadata repository for this server, shift entries to another server
+                // if needed
                 logger.info("Got admin message UPDATE (update metadata)!");
                 update(adminMessageString);
             }

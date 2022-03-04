@@ -709,33 +709,36 @@ public class ECSClient implements IECSClient {
         sb.append("\t Randomly choose <num> nodes from available machines and start them \n");
 
         sb.append(PROMPT).append("addnode <cacheStrategy> <cacheSize>");
-        sb.append("\t\t Create new KVServer and add it to the storage service at an arbitrary position \n");
+        sb.append("\t Create new KVServer and add it to the storage service at an arbitrary position \n");
 
         sb.append(PROMPT).append("start");
         sb.append(
-                "\t\t Starts the storage service by calling start() on all KVServer instances that participate in the service \n");
+                "\t\t\t\t\t Starts the storage service by calling start() on all KVServer instances that participate in the service \n");
 
         sb.append(PROMPT).append("stop");
         sb.append(
-                "\t\t Stops the service - all participating KVServers are stopped for processing client requests, but remain running \n");
+                "\t\t\t\t\t Stops the service - all participating KVServers are stopped for processing client requests, but remain running \n");
 
         sb.append(PROMPT).append("shutdown");
-        sb.append("\t\t Stops all server instances and exits the remote processes \n");
+        sb.append("\t\t\t\t\t Stops all server instances and exits the remote processes \n");
 
-        sb.append(PROMPT).append("removenode <index>");
+        sb.append(PROMPT).append("removenode <server1>:<ip>:<port> ...");
         sb.append("\t Remove a server from the storage service at an arbitrary position \n");
 
         sb.append(PROMPT).append("status");
-        sb.append("\t\t Get the current status of all available servers \n");
+        sb.append("\t\t\t\t\t Get the current status of all available servers \n");
+
+        sb.append(PROMPT).append("cleanlogs");
+        sb.append("\t\t\t\t\t Clean all *.out and *.log files from the logs folder \n");
 
         sb.append(PROMPT).append("logLevel");
-        sb.append("\t\t changes the logLevel \n");
+        sb.append("\t\t\t\t\t changes the logLevel \n");
 
-        sb.append(PROMPT).append("\t\t\t ");
+        sb.append(PROMPT).append("\t\t\t\t\t\t ");
         sb.append("ALL | DEBUG | INFO | WARN | ERROR | FATAL | OFF \n");
 
         sb.append(PROMPT).append("quit ");
-        sb.append("\t\t Exits the program \n");
+        sb.append("\t\t\t\t\t Exits the program \n");
         System.out.println(sb.toString());
     }
 

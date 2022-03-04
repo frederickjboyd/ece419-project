@@ -29,6 +29,7 @@ hs_err_pid*
 *.tgz
 *.out
 .nfs*
+maildir*
 
 # Key-value data
 data

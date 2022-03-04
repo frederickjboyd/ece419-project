@@ -77,18 +77,35 @@ public class KVStore {
     public KVMessage get(String key) throws Exception {
         KVMessage kvmessage = new KVMessage(StatusType.GET, key, "");
         kvCommunication.sendMessage(kvmessage);
+        KVMessage kvmessageReceived = null;
+        kvmessageReceived = kvCommunication.receiveMessage();
 
-        KVMessage kvmessageReceived = kvCommunication.receiveMessage();
+        // try {
+        //     kvmessageReceived = kvCommunication.receiveMessage();
+        // } catch (IOException e){
+        //     logger.error("get msg receive failed!", e);
+        // }
+
         checkAndUpdateServer(kvmessageReceived, key);
 
         return kvmessageReceived;
     }
 
     public KVMessage put(String key, String value) throws Exception {
+        System.out.println(key);
+        System.out.println(value);
+
         KVMessage kvmessage = new KVMessage(StatusType.PUT, key, value);
         kvCommunication.sendMessage(kvmessage);
+        KVMessage kvmessageReceived = null;
+        kvmessageReceived = kvCommunication.receiveMessage();
 
-        KVMessage kvmessageReceived = kvCommunication.receiveMessage();
+        // try {
+        //     kvmessageReceived = kvCommunication.receiveMessage();
+        // } catch (IOException e){
+        //     logger.error("put msg receive failed!", e);
+        // }
+
         checkAndUpdateServer(kvmessageReceived, key);
 
         return kvmessageReceived;

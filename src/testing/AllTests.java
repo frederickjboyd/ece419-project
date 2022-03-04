@@ -27,6 +27,7 @@ public class AllTests {
         clientSuite.addTestSuite(MessageTest.class);
         clientSuite.addTestSuite(AdditionalTest.class);
         clientSuite.addTestSuite(PerformanceTest.class);
+        clientSuite.addTestSuite(HashRingTest.class);
         return clientSuite;
     }
 

@@ -83,6 +83,10 @@ public class KVServer implements IKVServer, Runnable {
 
     private Map<String, Metadata> allMetadata;
     private Metadata localMetadata;
+    
+    // REMOVE NODE: Mark server as to be deleted.
+    // Shutdown server once all data is transferred to successor node
+    private boolean toBeDeleted = false;
 
     /**
      * M1: Start KV Server at given port. Server NOT distributed.
@@ -531,6 +535,7 @@ public class KVServer implements IKVServer, Runnable {
             for (int i = 0; i < threadList.size(); i++) {
                 threadList.get(i).interrupt();
             }
+            logger.info("Goodbye, server is closing");
             serverSocket.close();
         } catch (IOException e) {
             logger.error("Error! " +
@@ -584,6 +589,7 @@ public class KVServer implements IKVServer, Runnable {
 
     @Override
     public void shutDown() {
+        logger.info("Shutting down the KVServer through ECS...");
         close();
     }
 
@@ -727,6 +733,14 @@ public class KVServer implements IKVServer, Runnable {
         BigInteger begin = localMetadata.getHashStart();
         BigInteger end = localMetadata.getHashStop();
 
+        // REMOVE NODE - Check if the hash start and stop are 0,0
+        // If so, this is a REMOVE update and all entries should be transferred away
+        // Server should be shutdown after receiving confirmation of transfer
+        if (begin == BigInteger.valueOf(0) && end == BigInteger.valueOf(0)){
+            logger.info("**** REMOVE SERVER (0,0 hash range): KVServer marked as to be deleted!");
+            this.toBeDeleted = true;
+        }
+
         // Acquire write lock - prevent further writing to this server since data is stale
         lockWrite();
 
@@ -802,6 +816,15 @@ public class KVServer implements IKVServer, Runnable {
             }
         }
 
+        logger.info("Outgoing data transfer completed!");
+
+        // If this server is being removed, shut it down for good
+        if (this.toBeDeleted){
+            logger.info("*** Shutting down server after confirming outgoing data transfer complete!");
+            clearStorage();
+            shutDown();
+        }
+
         // Release the write lock since data is now up to date
         unLockWrite();
     }
@@ -816,6 +839,8 @@ public class KVServer implements IKVServer, Runnable {
         // Process incoming admin message string
         AdminMessage incomingMessage = new AdminMessage(adminMessageString);
         // MessageType incomingMessageType = incomingMessage.getMsgType();
+
+        logger.info("Trying to process incoming data transfer!");
 
         // Acquire write lock
         lockWrite();
@@ -853,6 +878,7 @@ public class KVServer implements IKVServer, Runnable {
         // Build destination server name
         //String senderServerName = zooPathRoot + "/" + incomingMessage.getSendingServer();
         String originServerName = incomingMessage.getSendingServer();
+        logger.info("Received and finished an incoming data transfer from: " + originServerName);
 
         try {
             // Send admin message to sender server

@@ -50,7 +50,7 @@ public class HashRingTest extends TestCase {
 
     @Test
     /**
-     * Check that size of hash ring matches number of possible servers.
+     * Check that size of hash ring matches number of added servers.
      */
     public void testHashRingSize() {
         HashMap<BigInteger, ECSNode> hashRing = hashRingClass.getHashRing();
@@ -140,7 +140,7 @@ public class HashRingTest extends TestCase {
 
     @Test
     /**
-     * Test removing a node from the hash ring.
+     * Test removing a random node from the hash ring.
      */
     public void testNodeRemove() {
         HashMap<BigInteger, ECSNode> hashRing = hashRingClass.getHashRing();
@@ -183,7 +183,7 @@ public class HashRingTest extends TestCase {
 
     @Test
     /**
-     * Test adding a node to the hash ring.
+     * Test adding a random node to the hash ring.
      */
     public void testNodeAdd() {
         // Determine possible nodes to add

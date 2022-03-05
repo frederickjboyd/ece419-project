@@ -36,7 +36,8 @@ public class AdditionalTest extends TestCase {
 
     @Test
     public void testPutWithSpaceInMsg() {
-        //** This test mainly test if there exist space in the value the spaces will all be recorded */
+        // ** This test mainly test if there exist space in the value the spaces will
+        // all be recorded */
 
         String key = "foo2";
         String value = "bar     2";
@@ -57,13 +58,15 @@ public class AdditionalTest extends TestCase {
         }
 
         System.out.println("test putWithSpaceInMsg success");
-        assertTrue(ex == null && getResponse.getValue().equals("bar     2") && (response.getStatus() == StatusType.PUT_SUCCESS || response.getStatus() == StatusType.PUT_UPDATE));
-    
+        assertTrue(ex == null && getResponse.getValue().equals("bar     2")
+                && (response.getStatus() == StatusType.PUT_SUCCESS || response.getStatus() == StatusType.PUT_UPDATE));
+
     }
 
     @Test
     public void testEmptyKeyAndMsg() {
-        //** This test mainly test if there exist space in the value the spaces will all be recorded */
+        // ** This test mainly test if there exist space in the value the spaces will
+        // all be recorded */
 
         String key = "";
         String value = "";
@@ -77,12 +80,13 @@ public class AdditionalTest extends TestCase {
         }
         System.out.println("test testEmptyKeyAndMsg success");
         assertTrue(response.getStatus() == StatusType.DELETE_ERROR);
-        
+
     }
 
     @Test
     public void testPutWithDiffCap() {
-        //** This test mainly test that the capitalization of key will matter and be registered as individual query*/
+        // ** This test mainly test that the capitalization of key will matter and be
+        // registered as individual query*/
         String key = "foo";
         String value = "bar";
         String keyCap = "Foo";
@@ -99,13 +103,14 @@ public class AdditionalTest extends TestCase {
         }
 
         System.out.println("test putWithDiffCap success");
-        assertTrue(ex == null && !response.getValue().equals(responseCap.getValue()) && (response.getStatus() == StatusType.PUT_SUCCESS || response.getStatus() == StatusType.PUT_UPDATE));
-    
+        assertTrue(ex == null && !response.getValue().equals(responseCap.getValue())
+                && (response.getStatus() == StatusType.PUT_SUCCESS || response.getStatus() == StatusType.PUT_UPDATE));
+
     }
-    
+
     @Test
     public void testMultithreadingPut() {
-        //** This test checks that multiple clients can send PUT requests together*/
+        // ** This test checks that multiple clients can send PUT requests together*/
         KVMessage response1 = null;
         KVMessage response2 = null;
         Exception ex = null;
@@ -118,14 +123,14 @@ public class AdditionalTest extends TestCase {
         }
 
         System.out.println("test multithreading_put success");
-        assertTrue(ex == null && 
-        (response1.getStatus() == StatusType.PUT_SUCCESS) && 
-        (response2.getStatus() == StatusType.PUT_SUCCESS));
+        assertTrue(ex == null &&
+                (response1.getStatus() == StatusType.PUT_SUCCESS) &&
+                (response2.getStatus() == StatusType.PUT_SUCCESS));
     }
 
     @Test
     public void testMultithreadingGet() {
-        //** This test checks that multiple clients can send GET requests together*/
+        // ** This test checks that multiple clients can send GET requests together*/
         String key = "foo";
         KVMessage response1 = null;
         KVMessage response2 = null;
@@ -146,12 +151,14 @@ public class AdditionalTest extends TestCase {
         }
 
         System.out.println("test multithreading_get success");
-        assertTrue(ex == null && (response1.getValue().equals("secondbar")) && (response2.getValue().equals("secondbar")));
+        assertTrue(
+                ex == null && (response1.getValue().equals("secondbar")) && (response2.getValue().equals("secondbar")));
     }
 
     @Test
     public void testMultiThreadingCombined() {
-        //** This test checks that multiple clients can send complex sequences of puts and gets together*/
+        // ** This test checks that multiple clients can send complex sequences of puts
+        // and gets together*/
         KVMessage responsePut = null;
         KVMessage responseUpdate = null;
         KVMessage responseGet = null;
@@ -174,12 +181,12 @@ public class AdditionalTest extends TestCase {
             ex = e;
         }
         System.out.println("testMultithreadingCombined success");
-        assertTrue(ex == null && 
-        (responsePut.getStatus() == StatusType.PUT_SUCCESS) &&
-        (responseUpdate.getStatus() == StatusType.PUT_UPDATE) &&
-        (responseGet.getValue().equals("hellotwo")) && 
-        (responseDelete.getStatus() == StatusType.DELETE_SUCCESS) &&
-        (responseGet2.getStatus() == StatusType.GET_ERROR));
+        assertTrue(ex == null &&
+                (responsePut.getStatus() == StatusType.PUT_SUCCESS) &&
+                (responseUpdate.getStatus() == StatusType.PUT_UPDATE) &&
+                (responseGet.getValue().equals("hellotwo")) &&
+                (responseDelete.getStatus() == StatusType.DELETE_SUCCESS) &&
+                (responseGet2.getStatus() == StatusType.GET_ERROR));
     }
 
 }

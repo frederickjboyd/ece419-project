@@ -10,11 +10,10 @@ import ecs.ECSNode;
 import junit.framework.TestCase;
 import java.util.List;
 
-
 public class ConnectionTest extends TestCase {
 
     public void testConnectionSuccess() {
-        
+
         Exception ex = null;
         // CacheStrategy cacheStrategy = CacheStrategy.FIFO;
         String cacheStrategy = "FIFO";
@@ -43,7 +42,6 @@ public class ConnectionTest extends TestCase {
 
         // kvClient = new KVStore("localhost", 50000);
         KVStore kvClient = new KVStore(host, port);
-
 
         // KVStore kvClient = new KVStore("localhost", 50000);
         try {

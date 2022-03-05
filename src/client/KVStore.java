@@ -79,19 +79,24 @@ public class KVStore {
         KVMessage kvmessage = new KVMessage(StatusType.GET, key, "");
         kvCommunication.sendMessage(kvmessage);
         KVMessage kvmessageReceived = null;
-        // kvmessageReceived = kvCommunication.receiveMessage();
-
-        try {
-            kvmessageReceived = kvCommunication.receiveMessage();
-        } catch (IOException e){
-            logger.error("get msg receive failed!", e);
-            kvmessageReceived=checkServer(kvmessage);
-        }
-
-        checkAndUpdateServer(kvmessageReceived, key);
-
-        kvCommunication.sendMessage(kvmessage);
         kvmessageReceived = kvCommunication.receiveMessage();
+
+        if (kvmessageReceived.getStatus() == KVMessage.StatusType.SERVER_NOT_RESPONSIBLE) {
+            // kvmessageReceived=checkServer(kvmessage);
+            checkAndUpdateServer(kvmessageReceived, key);
+            kvCommunication.sendMessage(kvmessage);
+            kvmessageReceived = kvCommunication.receiveMessage();
+        }
+        // try {
+        //     kvmessageReceived = kvCommunication.receiveMessage();
+        // } catch (IOException e){
+        //     logger.error("get msg receive failed!", e);
+        //     kvmessageReceived=checkServer(kvmessage);
+        // }
+
+        // checkAndUpdateServer(kvmessageReceived, key);
+        // kvCommunication.sendMessage(kvmessage);
+        // kvmessageReceived = kvCommunication.receiveMessage();
 
         return kvmessageReceived;
     }
@@ -103,19 +108,27 @@ public class KVStore {
         KVMessage kvmessage = new KVMessage(StatusType.PUT, key, value);
         kvCommunication.sendMessage(kvmessage);
         KVMessage kvmessageReceived = null;
-        // kvmessageReceived = kvCommunication.receiveMessage();
-
-        try {
-            kvmessageReceived = kvCommunication.receiveMessage();
-        } catch (IOException e){
-            logger.error("put msg receive failed!", e);
-            kvmessageReceived=checkServer(kvmessage);
-
-        }
-        checkAndUpdateServer(kvmessageReceived, key);
-        kvCommunication.sendMessage(kvmessage);
-
         kvmessageReceived = kvCommunication.receiveMessage();
+
+        if (kvmessageReceived.getStatus() == KVMessage.StatusType.SERVER_NOT_RESPONSIBLE) {
+            // kvmessageReceived=checkServer(kvmessage);
+            checkAndUpdateServer(kvmessageReceived, key);
+            kvCommunication.sendMessage(kvmessage);
+            kvmessageReceived = kvCommunication.receiveMessage();
+        
+        }
+
+        // try {
+        //     kvmessageReceived = kvCommunication.receiveMessage();
+        // } catch (IOException e){
+        //     logger.error("put msg receive failed!", e);
+        //     kvmessageReceived=checkServer(kvmessage);
+
+        // }
+        // checkAndUpdateServer(kvmessageReceived, key);
+
+        // kvCommunication.sendMessage(kvmessage);
+        // kvmessageReceived = kvCommunication.receiveMessage();
 
 
 
@@ -137,35 +150,23 @@ public class KVStore {
 
             String originServerAddress = address;
             int originServerPort = port;
-
-            // Insert test case when metadata size is very small or dun contain required
-            // server or port to see what's the end server and port and response
             int i;
 
             for (i = 0; i < metadata.size(); i++) {
                 Metadata obj = metadata.get(i);
-                // if request key is larger than start and smaller than end of current ith
-                // server range
                 BigInteger begin = obj.getHashStart();
                 BigInteger end = obj.getHashStop();
-                BigInteger mdKey = hexkeyInt;
 
-                if ((begin.compareTo(end) != 1) && (mdKey.compareTo(begin) == 1) && (mdKey.compareTo(end) == -1) ||
-                (begin.compareTo(end) != -1) && (mdKey.compareTo(begin) == -1) && (mdKey.compareTo(end) == -1) ||
-                (begin.compareTo(end) != -1) && (mdKey.compareTo(begin) == 1) && (mdKey.compareTo(end) == 1)) 
+                if ((begin.compareTo(end) != 1) && (hexkeyInt.compareTo(begin) == 1) && (hexkeyInt.compareTo(end) == -1) ||
+                (begin.compareTo(end) != -1) && (hexkeyInt.compareTo(begin) == -1) && (hexkeyInt.compareTo(end) == -1) ||
+                (begin.compareTo(end) != -1) && (hexkeyInt.compareTo(begin) == 1) && (hexkeyInt.compareTo(end) == 1)) 
                 {
-                // if (hexkeyInt.compareTo(obj.getHashStart()) > 0 && hexkeyInt.compareTo(obj.getHashStop()) <= 0) { // Are
-                                                                                                                  // there
-                                                                                                                  // alternatives
-                    // towards the range or
-                    // has this be set
                     disconnect();
                     address = obj.getHost();
                     port = obj.getPort();
 
                     try {
                         connect();
-
                         String infoMsg = String.format("Metadata updated and switched to server %s and port:%s",
                                 address, port);
                         System.out.println(infoMsg);
@@ -195,26 +196,25 @@ public class KVStore {
                 logger.error(errorMsg);
                 // throw new Exception("Cannot find avaliable server to connect");
                 return;
-                
             }
-
         }
         return;
     }
 
-
+    public List<Metadata> returnCurrentMetadata() {
+        return metadata;
+    }
     public boolean isRunning() {
         return (kvCommunication != null) && (kvCommunication.getIsOpen());
     }
 
     
     public KVMessage checkServer(KVMessage msg) throws Exception {
-
 		System.out.println("Server not found, searching and reconnecting");
 		logger.info("Server not found, searching and reconnecting");
 
 		if (metadata == null) {
-			throw new Exception("No  server available");
+			throw new Exception("Metadata empty, no server available");
         }
 
 		KVMessage kvmessageReceived = null;
@@ -239,13 +239,15 @@ public class KVStore {
                 logger.error("new connection failed, origin server and port connection restored");
                 kvCommunication.sendMessage(msg);
                 kvmessageReceived = kvCommunication.receiveMessage();
+                // return kvmessageReceived;
+
             }
             System.out.println(i);
             // break;
         }
 
         if (i>=metadata.size()) {
-            throw new Exception("No  server available");
+            throw new Exception("No server available");
 
         }
         return kvmessageReceived;

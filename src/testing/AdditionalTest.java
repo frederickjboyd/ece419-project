@@ -14,7 +14,7 @@ public class AdditionalTest extends TestCase {
     private KVStore kvClient2;
 
     public void setUp() {
-        kvClient = new KVStore("localhost", 50000);
+        kvClient = new KVStore("localhost", 25001);
         try {
             kvClient.connect();
         } catch (Exception e) {

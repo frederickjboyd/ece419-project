@@ -13,6 +13,7 @@ import java.util.Set;
 import java.util.TreeSet;
 
 import org.junit.Test;
+import app_kvECS.ECSClient;
 
 import app_kvServer.IKVServer.CacheStrategy;
 import junit.framework.TestCase;

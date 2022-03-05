@@ -20,6 +20,10 @@ import app_kvServer.IKVServer.CacheStrategy;
 import junit.framework.TestCase;
 import ecs.*;
 
+import junit.framework.TestCase;
+import shared.communication.KVMessage;
+import shared.communication.IKVMessage.StatusType;
+
 public class newConnectionTest extends TestCase {
     private HashRing hashRingClass = new HashRing();
     private static final String CONFIG_PATH = "ecs.config";
@@ -143,13 +147,15 @@ public class newConnectionTest extends TestCase {
         KVMessage r1 = null;
         KVMessage r2 = null;
         KVMessage r3 = null;
+        Exception ex = null;
+
 
         try {
             r1 = kvClient.put("1", "3");
             r2 = kvClient.put("2", "2");
             r3 = kvClient.put("3", "1");
         } catch (Exception e) {
-            ex = e;
+            ex=e;
         }
 
         assertEquals(KVMessage.StatusType.PUT_SUCCESS, r1.getStatus());
@@ -168,6 +174,8 @@ public class newConnectionTest extends TestCase {
         KVMessage r1 = null;
         KVMessage r2 = null;
         KVMessage r3 = null;
+        Exception ex = null;
+
 
         try {
             r1 = kvClient.get("1");
@@ -194,6 +202,8 @@ public class newConnectionTest extends TestCase {
         KVMessage r1 = null;
         KVMessage r2 = null;
         KVMessage r3 = null;
+        Exception ex = null;
+
 
         try {
             r1 = kvClient.put("1", "");

@@ -3,6 +3,7 @@ package testing;
 import org.junit.Test;
 
 import app_kvECS.*;
+import ecs.ECSNode; 
 import client.KVStore;
 import junit.framework.TestCase;
 import shared.communication.KVMessage;
@@ -10,6 +11,8 @@ import shared.communication.IKVMessage.StatusType;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Random;
+import java.nio.charset.*;
 
 public class ECSPerformanceTest_5Server_FIFO5 extends TestCase {
 
@@ -46,23 +49,23 @@ public class ECSPerformanceTest_5Server_FIFO5 extends TestCase {
     private static final int cacheSize = 5;
 
     public void setUp() {
+        List<ECSNode> ecsNodeList = null;
         try {
+            System.out.println("Setting up ECS performance test!");
             ecs = new ECSClient(ECSConfigPath);
-        	ecs.addNodes(numServers, cacheStrategy, cacheSize);
+        	ecsNodeList = ecs.addNodes(numServers, cacheStrategy, cacheSize);
         	try {
-            	ecs.awaitNodes(1, 2000);
+            	ecs.awaitNodes(numServers, 2000);
         	} catch (Exception e) {}
+            System.out.println("Starting ECS!");
             ecs.start();
         } catch (Exception e) {
             System.out.println("ECS Performance Test failed on ECSClient init: " + e);
         }
         // Pick a random available server to connect to
-        List<String> availableServers = ecs.getAvailableServers();
-        // System.out.println(availableServers);
-        String servername = availableServers.get(0);
-        String[] tokens = servername.split(":");
-        String hostname = tokens[1];
-        int port = Integer.parseInt(tokens[2]);
+        String hostname = ecsNodeList.get(0).getNodeHost();
+        int port = ecsNodeList.get(0).getNodePort();
+
         System.out.println("ECS Performance test connecting to: " + hostname + ":" + port);
         
         // // Initialize clients
@@ -94,14 +97,33 @@ public class ECSPerformanceTest_5Server_FIFO5 extends TestCase {
             kvClientList.add(new KVStore(hostname, port));
         }
 
+        // Connect all KVClients
+        try {
+            for (int i = 0; i < 1; i++){
+                kvClientList.get(i).connect();
+            }
+            System.out.println("ECS Performance Test SUCCESS: Clients connected!");
+        } catch (Exception e) {
+            System.err.println("ECS Performance Test FAILURE: Client Connection Failed!");
+        }
 
         System.out.println("*** Finished ECS Setup for performance run ***");
     }
 
     public void tearDown() {
-        // System.out.println("Shutdown performance - start");
+        System.out.println("Shutdown performance - start");
         // kvClient.disconnect();
-        System.out.println("Shutdown performance - success");
+        try{
+            ecs.shutdown();
+            ecs.quit();
+            for (int i = 0; i < 20; i++){
+                kvClientList.get(i).disconnect();
+            }
+            System.out.println("Shutdown performance - success");
+        }
+        catch (Exception e){
+            System.err.println("Failed to shut down ECS!");
+        }
     }
 
     /**Helper function to create data of specific size 
@@ -110,34 +132,43 @@ public class ECSPerformanceTest_5Server_FIFO5 extends TestCase {
     public static String createDataSize(int msgSize) {
         StringBuilder sb = new StringBuilder(msgSize);
         for (int i=0; i<msgSize; i++) {
-          sb.append('a');
+          sb.append(generateRandomString(1));
         }
         return sb.toString();
       }
 
 
-
+    /**
+     * Generate a random string
+     * @param size size of desired random string
+     */
+    protected static String generateRandomString(int size) {
+        String SALTCHARS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890";
+        StringBuilder salt = new StringBuilder();
+        Random rnd = new Random();
+        while (salt.length() < size) { // length of the random string.
+            int index = (int) (rnd.nextFloat() * SALTCHARS.length());
+            salt.append(SALTCHARS.charAt(index));
+        }
+        String saltStr = salt.toString();
+        return saltStr;
+    }
 
     // ************************ Following section tests 1 clients ************************
     
     /** Run performance test with 80% puts, 20% Gets */
     @Test
     public void test_80_20_1client() {      
-        try {
-            kvClientList.get(0).connect();
-            // kvClient1.connect();
-            // kvClient2.connect();
-            // kvClient3.connect();
-            // kvClient4.connect();
-            // kvClient5.connect();
-        } catch (Exception e) {
-            System.err.println("ECS Performance Test Client Connection Failed!");
-        }
+        // try {
+        //     kvClientList.get(0).connect();
+        // } catch (Exception e) {
+        //     System.err.println("ECS Performance Test Client Connection Failed!");
+        // }
 
-        String key = "test";
+        String key = null;
         KVMessage response = null;
         Exception ex = null;
-        int loops = 150;
+        int loops = 20; // normally 150
         String output = "";
         double totalBytes = 0;
 
@@ -148,10 +179,12 @@ public class ECSPerformanceTest_5Server_FIFO5 extends TestCase {
         long start = System.currentTimeMillis();
 
         for (int i = 0; i < loops; i++) {
+            // Generate a random key each time
+            key = generateRandomString(10);
             try {
                 for (int j = 0; j < 5; j++){
                     if (j == 4){
-                        output = kvClientList.get(0).get(key).getValue();
+                        kvClientList.get(0).get(key).getValue();
                     }
                     else{
                         kvClientList.get(0).put(key, value);
@@ -181,569 +214,564 @@ public class ECSPerformanceTest_5Server_FIFO5 extends TestCase {
         System.out.println("Throughput (80put/20get 5 Servers/FIFO 50/1 client): " + throughput + " KB/s");
         System.out.println("Latency (80put/20get 5 Servers/FIFO 50/1 client)   : " + latency + " ms");
 
-        kvClientList.get(0).disconnect();
-
-        // kvClient1.disconnect();
-        // kvClient2.disconnect();
-        // kvClient3.disconnect();
-        // kvClient4.disconnect();
-        // kvClient5.disconnect();
-
+        // kvClientList.get(0).disconnect();
         assertTrue(ex == null);
     }
 
 
 
-    /** Run performance test with 50% puts, 50% Gets */
-    @Test
-    public void test_50_50_1client() {
-        try {
-            kvClientList.get(0).connect();
-        } catch (Exception e) {
-            System.err.println("ECS Performance Test Client Connection Failed!");
-        }
-
-        String key = "test";
-        KVMessage response = null;
-        Exception ex = null;
-        int loops = 150;
-        String output = "";
-        double totalBytes = 0;
-
-        // 1024 byte array
-        String value = createDataSize(1024);
-
-        // Start benchmark
-        long start = System.currentTimeMillis();
-
-        for (int i = 0; i < loops; i++) {
-            try {
-                for (int j = 0; j < 5; j++){
-                    if (j == 0 || j == 1){
-                        output = kvClientList.get(0).get(key).getValue();
-                    }
-                    else if (j == 2 || j == 3) {
-                        kvClientList.get(0).put(key, value);
-                    }
-                }
-            }catch (Exception e) {
-                System.out.println("Failed performance test!");
-                ex = e;
-            }
-        }
-
-        long timeElapsed = System.currentTimeMillis() - start;
-        System.out.println("Time Elapsed (ms):"+timeElapsed);
-
-        try{
-            totalBytes = loops * ((2 * value.getBytes("UTF-8").length) + 2*(output.getBytes("UTF-8").length));
-        }
-        catch (Exception e){
-            ex = e;
-        }
-
-        // time elapsed in ms, so multiply by 1000 to get per second
-        // totalbytes in bytes, so divide by 1000 to get kilobytes
-        double throughput = 1000 * (totalBytes / 1000) / timeElapsed;
-        double latency = timeElapsed / (loops * 4);
-
-        System.out.println("Throughput (50/50 5 Servers/FIFO 50/1 client): " + throughput + " KB/s");
-        System.out.println("Latency (50/50 5 Servers/FIFO 50/1 client)   : " + latency + " ms");
-
-        kvClientList.get(0).disconnect();
-
-        assertTrue(ex == null);
-    }
-
-
-    /** Run performance test with 20% puts, 80% Gets */
-    @Test
-    public void test_20_80_1client() {
-        try {
-            kvClientList.get(0).connect();
-        } catch (Exception e) {
-            System.err.println("ECS Performance Test Client Connection Failed!");
-        }
-
-        String key = "test";
-        KVMessage response = null;
-        Exception ex = null;
-        int loops = 150;
-        String output = "";
-        double totalBytes = 0;
-
-        // 1024 byte array
-        String value = createDataSize(1024);
-
-        // Start benchmark
-        long start = System.currentTimeMillis();
-
-        for (int i = 0; i < loops; i++) {
-            try {
-                for (int j = 0; j < 5; j++){
-                    if (j == 0){
-                        kvClientList.get(0).put(key, value);
-                    }
-                    else{
-                        output = kvClientList.get(0).get(key).getValue();
-                    }
-                }
-            }catch (Exception e) {
-                System.out.println("Failed performance test!");
-                ex = e;
-            }
-        }
-
-        long timeElapsed = System.currentTimeMillis() - start;
-        System.out.println("Time Elapsed (ms):"+timeElapsed);
-
-        try{
-            totalBytes = loops * ((1 * value.getBytes("UTF-8").length) + 4*(output.getBytes("UTF-8").length));
-        }
-        catch (Exception e){
-            ex = e;
-        }
-
-        // time elapsed in ms, so multiply by 1000 to get per second
-        // totalbytes in bytes, so divide by 1000 to get kilobytes
-        double throughput = 1000 * (totalBytes / 1000) / timeElapsed;
-        double latency = timeElapsed / (loops * 5);
-
-        System.out.println("Throughput (20 puts/80 gets 5 Servers/FIFO 50/1 client): " + throughput + " KB/s");
-        System.out.println("Latency (20 puts/80 gets 5 Servers/FIFO 50/1 client)   : " + latency + " ms");
-
-        kvClientList.get(0).disconnect();
-
-        assertTrue(ex == null);
-    }
-
-
-
-
-    // ************************ Following section tests 5 clients ************************
-
-        /** Run performance test with 80% puts, 20% Gets */
-    @Test
-    public void test_80_20_5client() {      
-        try {
-            for (int i = 0; i < 5; i++){
-                kvClientList.get(i).connect();
-            }
-            // kvClient1.connect();
-            // kvClient2.connect();
-            // kvClient3.connect();
-            // kvClient4.connect();
-            // kvClient5.connect();
-        } catch (Exception e) {
-            System.err.println("ECS Performance Test Client Connection Failed!");
-        }
-
-        String key = "test";
-        KVMessage response = null;
-        Exception ex = null;
-        int loops = 150;
-        String output = "";
-        double totalBytes = 0;
-
-        // 1024 byte array
-        String value = createDataSize(1024);
-
-        // Start benchmark
-        long start = System.currentTimeMillis();
-
-        for (int i = 0; i < loops; i++) {
-            try {
-                for (int j = 0; j < 5; j++){
-                    if (j == 4){
-                        output = kvClientList.get(j).get(key).getValue();
-                    }
-                    else{
-                        kvClientList.get(j).put(key, value);
-                    }
-                }
-            }catch (Exception e) {
-                System.out.println("Failed performance test!");
-                ex = e;
-            }
-        }
-
-        long timeElapsed = System.currentTimeMillis() - start;
-        System.out.println("Time Elapsed (ms):"+timeElapsed);
-
-        try{
-            totalBytes = loops * ((4 * value.getBytes("UTF-8").length) + output.getBytes("UTF-8").length);
-        }
-        catch (Exception e){
-            ex = e;
-        }
-
-        // time elapsed in ms, so multiply by 1000 to get per second
-        // totalbytes in bytes, so divide by 1000 to get kilobytes
-        double throughput = 1000 * (totalBytes / 1000) / timeElapsed;
-        double latency = timeElapsed / (loops * 5);
-
-        System.out.println("Throughput (80put/20get 5 Servers/FIFO 50/5 client): " + throughput + " KB/s");
-        System.out.println("Latency (80put/20get 5 Servers/FIFO 50/5 client)   : " + latency + " ms");
-
-        for (int i = 0; i < 5; i++){
-            kvClientList.get(i).disconnect();
-        }
-
-        // kvClient1.disconnect();
-        // kvClient2.disconnect();
-        // kvClient3.disconnect();
-        // kvClient4.disconnect();
-        // kvClient5.disconnect();
-
-        assertTrue(ex == null);
-    }
-
-
-    /** Run performance test with 50% puts, 50% Gets */
-    @Test
-    public void test_50_50_5client() {
-        try {
-            for (int i = 0; i < 5; i++){
-                kvClientList.get(i).connect();
-            }
-        } catch (Exception e) {
-            System.err.println("ECS Performance Test Client Connection Failed!");
-        }
-
-        String key = "test";
-        KVMessage response = null;
-        Exception ex = null;
-        int loops = 150;
-        String output = "";
-        double totalBytes = 0;
-
-        // 1024 byte array
-        String value = createDataSize(1024);
-
-        // Start benchmark
-        long start = System.currentTimeMillis();
-
-        for (int i = 0; i < loops; i++) {
-            try {
-                for (int j = 0; j < 5; j++){
-                    if (j == 0 || j == 1){
-                        output = kvClientList.get(j).get(key).getValue();
-                    }
-                    else if (j == 2 || j == 3) {
-                        kvClientList.get(j).put(key, value);
-                    }
-                }
-            }catch (Exception e) {
-                System.out.println("Failed performance test!");
-                ex = e;
-            }
-        }
-
-        long timeElapsed = System.currentTimeMillis() - start;
-        System.out.println("Time Elapsed (ms):"+timeElapsed);
-
-        try{
-            totalBytes = loops * ((2 * value.getBytes("UTF-8").length) + 2*(output.getBytes("UTF-8").length));
-        }
-        catch (Exception e){
-            ex = e;
-        }
-
-        // time elapsed in ms, so multiply by 1000 to get per second
-        // totalbytes in bytes, so divide by 1000 to get kilobytes
-        double throughput = 1000 * (totalBytes / 1000) / timeElapsed;
-        double latency = timeElapsed / (loops * 4);
-
-        System.out.println("Throughput (50/50 5 Servers/FIFO 50/5 client): " + throughput + " KB/s");
-        System.out.println("Latency (50/50 5 Servers/FIFO 50/5 client)   : " + latency + " ms");
-
-        for (int i = 0; i < 5; i++){
-            kvClientList.get(i).disconnect();
-        }
-
-        assertTrue(ex == null);
-    }
-
-
-    /** Run performance test with 20% puts, 80% Gets */
-    @Test
-    public void test_20_80_5client() {
-        try {
-            for (int i = 0; i < 5; i++){
-                kvClientList.get(i).connect();
-            }
-        } catch (Exception e) {
-            System.err.println("ECS Performance Test Client Connection Failed!");
-        }
-
-        String key = "test";
-        KVMessage response = null;
-        Exception ex = null;
-        int loops = 150;
-        String output = "";
-        double totalBytes = 0;
-
-        // 1024 byte array
-        String value = createDataSize(1024);
-
-        // Start benchmark
-        long start = System.currentTimeMillis();
-
-        for (int i = 0; i < loops; i++) {
-            try {
-                for (int j = 0; j < 5; j++){
-                    if (j == 0){
-                        kvClientList.get(j).put(key, value);
-                    }
-                    else{
-                        output = kvClientList.get(j).get(key).getValue();
-                    }
-                }
-            }catch (Exception e) {
-                System.out.println("Failed performance test!");
-                ex = e;
-            }
-        }
-
-        long timeElapsed = System.currentTimeMillis() - start;
-        System.out.println("Time Elapsed (ms):"+timeElapsed);
-
-        try{
-            totalBytes = loops * ((1 * value.getBytes("UTF-8").length) + 4*(output.getBytes("UTF-8").length));
-        }
-        catch (Exception e){
-            ex = e;
-        }
-
-        // time elapsed in ms, so multiply by 1000 to get per second
-        // totalbytes in bytes, so divide by 1000 to get kilobytes
-        double throughput = 1000 * (totalBytes / 1000) / timeElapsed;
-        double latency = timeElapsed / (loops * 5);
-
-        System.out.println("Throughput (20 puts/80 gets 5 Servers/FIFO 50/5 client): " + throughput + " KB/s");
-        System.out.println("Latency (20 puts/80 gets 5 Servers/FIFO 50/5 client)   : " + latency + " ms");
-
-
-        for (int i = 0; i < 5; i++){
-            kvClientList.get(i).disconnect();
-        }
-
-        assertTrue(ex == null);
-    }
-
-
-
-    // ************************ Following section tests 20 clients ************************
-
-    /** Run performance test with 80% puts, 20% Gets */
-    @Test
-    public void test_80_20_20client() {      
-        try {
-            for (int i = 0; i < 20; i++){
-                kvClientList.get(i).connect();
-            }
-            // kvClient1.connect();
-            // kvClient2.connect();
-            // kvClient3.connect();
-            // kvClient4.connect();
-            // kvClient5.connect();
-        } catch (Exception e) {
-            System.err.println("ECS Performance Test Client Connection Failed!");
-        }
-
-        String key = "test";
-        KVMessage response = null;
-        Exception ex = null;
-        int loops = 150;
-        String output = "";
-        double totalBytes = 0;
-
-        // 1024 byte array
-        String value = createDataSize(1024);
-
-        // Start benchmark
-        long start = System.currentTimeMillis();
-
-        for (int i = 0; i < loops; i++) {
-            try {
-                for (int j = 0; j < 20; j++){
-                    if (j == 16 || j == 17 || j == 18 || j == 19){
-                        output = kvClientList.get(j).get(key).getValue();
-                    }
-                    else{
-                        kvClientList.get(j).put(key, value);
-                    }
-                }
-            }catch (Exception e) {
-                System.out.println("Failed performance test!");
-                ex = e;
-            }
-        }
-
-        long timeElapsed = System.currentTimeMillis() - start;
-        System.out.println("Time Elapsed (ms):"+timeElapsed);
-
-        try{
-            totalBytes = loops * ((4 * value.getBytes("UTF-8").length) + output.getBytes("UTF-8").length);
-        }
-        catch (Exception e){
-            ex = e;
-        }
-
-        // time elapsed in ms, so multiply by 1000 to get per second
-        // totalbytes in bytes, so divide by 1000 to get kilobytes
-        double throughput = 1000 * (totalBytes / 1000) / timeElapsed;
-        double latency = timeElapsed / (loops * 5);
-
-        System.out.println("Throughput (80put/20get 5 Servers/FIFO 50/20 client): " + throughput + " KB/s");
-        System.out.println("Latency (80put/20get 5 Servers/FIFO 50/20 client)   : " + latency + " ms");
-
-        for (int i = 0; i < 20; i++){
-            kvClientList.get(i).disconnect();
-        }
-
-        // kvClient1.disconnect();
-        // kvClient2.disconnect();
-        // kvClient3.disconnect();
-        // kvClient4.disconnect();
-        // kvClient5.disconnect();
-
-        assertTrue(ex == null);
-    }
-
-
-
-    /** Run performance test with 50% puts, 50% Gets */
-    @Test
-    public void test_50_50_20client() {
-        try {
-            for (int i = 0; i < 20; i++){
-                kvClientList.get(i).connect();
-            }
-        } catch (Exception e) {
-            System.err.println("ECS Performance Test Client Connection Failed!");
-        }
-
-        String key = "test";
-        KVMessage response = null;
-        Exception ex = null;
-        int loops = 150;
-        String output = "";
-        double totalBytes = 0;
-
-        // 1024 byte array
-        String value = createDataSize(1024);
-
-        // Start benchmark
-        long start = System.currentTimeMillis();
-
-        for (int i = 0; i < loops; i++) {
-            try {
-                for (int j = 0; j < 5; j++){
-                    // 0, 2, 4, 6, 8, 10, 12, 14, 16, 18
-                    if (j % 2 == 0){
-                        output = kvClientList.get(j).get(key).getValue();
-                    }
-                    else{
-                        kvClientList.get(j).put(key, value);
-                    }
-                }
-            }catch (Exception e) {
-                System.out.println("Failed performance test!");
-                ex = e;
-            }
-        }
-
-        long timeElapsed = System.currentTimeMillis() - start;
-        System.out.println("Time Elapsed (ms):"+timeElapsed);
-
-        try{
-            totalBytes = loops * ((2 * value.getBytes("UTF-8").length) + 2*(output.getBytes("UTF-8").length));
-        }
-        catch (Exception e){
-            ex = e;
-        }
-
-        // time elapsed in ms, so multiply by 1000 to get per second
-        // totalbytes in bytes, so divide by 1000 to get kilobytes
-        double throughput = 1000 * (totalBytes / 1000) / timeElapsed;
-        double latency = timeElapsed / (loops * 4);
-
-        System.out.println("Throughput (50/50 5 Servers/FIFO 50/20 client): " + throughput + " KB/s");
-        System.out.println("Latency (50/50 5 Servers/FIFO 50/20 client)   : " + latency + " ms");
-
-        for (int i = 0; i < 20; i++){
-            kvClientList.get(i).disconnect();
-        }
-
-        assertTrue(ex == null);
-    }
-
-
-    /** Run performance test with 20% puts, 80% Gets */
-    @Test
-    public void test_20_80_20client() {
-        try {
-            for (int i = 0; i < 20; i++){
-                kvClientList.get(i).connect();
-            }
-        } catch (Exception e) {
-            System.err.println("ECS Performance Test Client Connection Failed!");
-        }
-
-        String key = "test";
-        KVMessage response = null;
-        Exception ex = null;
-        int loops = 150;
-        String output = "";
-        double totalBytes = 0;
-
-        // 1024 byte array
-        String value = createDataSize(1024);
-
-        // Start benchmark
-        long start = System.currentTimeMillis();
-
-        for (int i = 0; i < loops; i++) {
-            try {
-                for (int j = 0; j < 20; j++){
-                    if (j == 0 || j == 1 || j == 2 || j == 3){
-                        kvClientList.get(j).put(key, value);
-                    }
-                    else{
-                        output = kvClientList.get(j).get(key).getValue();
-                    }
-                }
-            }catch (Exception e) {
-                System.out.println("Failed performance test!");
-                ex = e;
-            }
-        }
-
-        long timeElapsed = System.currentTimeMillis() - start;
-        System.out.println("Time Elapsed (ms):"+timeElapsed);
-
-        try{
-            totalBytes = loops * ((1 * value.getBytes("UTF-8").length) + 4*(output.getBytes("UTF-8").length));
-        }
-        catch (Exception e){
-            ex = e;
-        }
-
-        // time elapsed in ms, so multiply by 1000 to get per second
-        // totalbytes in bytes, so divide by 1000 to get kilobytes
-        double throughput = 1000 * (totalBytes / 1000) / timeElapsed;
-        double latency = timeElapsed / (loops * 5);
-
-        System.out.println("Throughput (20 puts/80 gets 5 Servers/FIFO 50/20 client): " + throughput + " KB/s");
-        System.out.println("Latency (20 puts/80 gets 5 Servers/FIFO 50/20 client)   : " + latency + " ms");
-
-
-        for (int i = 0; i < 20; i++){
-            kvClientList.get(i).disconnect();
-        }
-
-        assertTrue(ex == null);
-    }
+    // /** Run performance test with 50% puts, 50% Gets */
+    // @Test
+    // public void test_50_50_1client() {
+    //     // try {
+    //     //     kvClientList.get(0).connect();
+    //     // } catch (Exception e) {
+    //     //     System.err.println("ECS Performance Test Client Connection Failed!");
+    //     // }
+
+    //     String key = "test";
+    //     KVMessage response = null;
+    //     Exception ex = null;
+    //     int loops = 20;
+    //     String output = "";
+    //     double totalBytes = 0;
+
+    //     // 1024 byte array
+    //     String value = createDataSize(1024);
+
+    //     // Start benchmark
+    //     long start = System.currentTimeMillis();
+
+    //     for (int i = 0; i < loops; i++) {
+    //         key = generateRandomString(10);
+    //         try {
+    //             for (int j = 0; j < 5; j++){
+    //                 if (j == 0 || j == 1){
+    //                     output = kvClientList.get(0).get(key).getValue();
+    //                 }
+    //                 else if (j == 2 || j == 3) {
+    //                     kvClientList.get(0).put(key, value);
+    //                 }
+    //             }
+    //         }catch (Exception e) {
+    //             System.out.println("Failed performance test!");
+    //             ex = e;
+    //         }
+    //     }
+
+    //     long timeElapsed = System.currentTimeMillis() - start;
+    //     System.out.println("Time Elapsed (ms):"+timeElapsed);
+
+    //     try{
+    //         totalBytes = loops * ((2 * value.getBytes("UTF-8").length) + 2*(output.getBytes("UTF-8").length));
+    //     }
+    //     catch (Exception e){
+    //         ex = e;
+    //     }
+
+    //     // time elapsed in ms, so multiply by 1000 to get per second
+    //     // totalbytes in bytes, so divide by 1000 to get kilobytes
+    //     double throughput = 1000 * (totalBytes / 1000) / timeElapsed;
+    //     double latency = timeElapsed / (loops * 4);
+
+    //     System.out.println("Throughput (50/50 5 Servers/FIFO 50/1 client): " + throughput + " KB/s");
+    //     System.out.println("Latency (50/50 5 Servers/FIFO 50/1 client)   : " + latency + " ms");
+
+    //     // kvClientList.get(0).disconnect();
+
+    //     assertTrue(ex == null);
+    // }
+
+
+    // /** Run performance test with 20% puts, 80% Gets */
+    // @Test
+    // public void test_20_80_1client() {
+    //     // try {
+    //     //     kvClientList.get(0).connect();
+    //     // } catch (Exception e) {
+    //     //     System.err.println("ECS Performance Test Client Connection Failed!");
+    //     // }
+
+    //     String key = "test";
+    //     KVMessage response = null;
+    //     Exception ex = null;
+    //     int loops = 20;
+    //     String output = "";
+    //     double totalBytes = 0;
+
+    //     // 1024 byte array
+    //     String value = createDataSize(1024);
+
+    //     // Start benchmark
+    //     long start = System.currentTimeMillis();
+
+    //     for (int i = 0; i < loops; i++) {
+    //         key = generateRandomString(10);
+    //         try {
+    //             for (int j = 0; j < 5; j++){
+    //                 if (j == 0){
+    //                     kvClientList.get(0).put(key, value);
+    //                 }
+    //                 else{
+    //                     output = kvClientList.get(0).get(key).getValue();
+    //                 }
+    //             }
+    //         }catch (Exception e) {
+    //             System.out.println("Failed performance test!");
+    //             ex = e;
+    //         }
+    //     }
+
+    //     long timeElapsed = System.currentTimeMillis() - start;
+    //     System.out.println("Time Elapsed (ms):"+timeElapsed);
+
+    //     try{
+    //         totalBytes = loops * ((1 * value.getBytes("UTF-8").length) + 4*(output.getBytes("UTF-8").length));
+    //     }
+    //     catch (Exception e){
+    //         ex = e;
+    //     }
+
+    //     // time elapsed in ms, so multiply by 1000 to get per second
+    //     // totalbytes in bytes, so divide by 1000 to get kilobytes
+    //     double throughput = 1000 * (totalBytes / 1000) / timeElapsed;
+    //     double latency = timeElapsed / (loops * 5);
+
+    //     System.out.println("Throughput (20 puts/80 gets 5 Servers/FIFO 50/1 client): " + throughput + " KB/s");
+    //     System.out.println("Latency (20 puts/80 gets 5 Servers/FIFO 50/1 client)   : " + latency + " ms");
+
+    //     // kvClientList.get(0).disconnect();
+
+    //     assertTrue(ex == null);
+    // }
+
+
+
+
+    // // ************************ Following section tests 5 clients ************************
+
+    //     /** Run performance test with 80% puts, 20% Gets */
+    // @Test
+    // public void test_80_20_5client() {      
+    //     try {
+    //         for (int i = 0; i < 5; i++){
+    //             kvClientList.get(i).connect();
+    //         }
+    //         // kvClient1.connect();
+    //         // kvClient2.connect();
+    //         // kvClient3.connect();
+    //         // kvClient4.connect();
+    //         // kvClient5.connect();
+    //     } catch (Exception e) {
+    //         System.err.println("ECS Performance Test Client Connection Failed!");
+    //     }
+
+    //     String key = "test";
+    //     KVMessage response = null;
+    //     Exception ex = null;
+    //     int loops = 20;
+    //     String output = "";
+    //     double totalBytes = 0;
+
+    //     // 1024 byte array
+    //     String value = createDataSize(1024);
+
+    //     // Start benchmark
+    //     long start = System.currentTimeMillis();
+
+    //     for (int i = 0; i < loops; i++) {
+    //         try {
+    //             for (int j = 0; j < 5; j++){
+    //                 if (j == 4){
+    //                     output = kvClientList.get(j).get(key).getValue();
+    //                 }
+    //                 else{
+    //                     kvClientList.get(j).put(key, value);
+    //                 }
+    //             }
+    //         }catch (Exception e) {
+    //             System.out.println("Failed performance test!");
+    //             ex = e;
+    //         }
+    //     }
+
+    //     long timeElapsed = System.currentTimeMillis() - start;
+    //     System.out.println("Time Elapsed (ms):"+timeElapsed);
+
+    //     try{
+    //         totalBytes = loops * ((4 * value.getBytes("UTF-8").length) + output.getBytes("UTF-8").length);
+    //     }
+    //     catch (Exception e){
+    //         ex = e;
+    //     }
+
+    //     // time elapsed in ms, so multiply by 1000 to get per second
+    //     // totalbytes in bytes, so divide by 1000 to get kilobytes
+    //     double throughput = 1000 * (totalBytes / 1000) / timeElapsed;
+    //     double latency = timeElapsed / (loops * 5);
+
+    //     System.out.println("Throughput (80put/20get 5 Servers/FIFO 50/5 client): " + throughput + " KB/s");
+    //     System.out.println("Latency (80put/20get 5 Servers/FIFO 50/5 client)   : " + latency + " ms");
+
+    //     for (int i = 0; i < 5; i++){
+    //         kvClientList.get(i).disconnect();
+    //     }
+
+    //     // kvClient1.disconnect();
+    //     // kvClient2.disconnect();
+    //     // kvClient3.disconnect();
+    //     // kvClient4.disconnect();
+    //     // kvClient5.disconnect();
+
+    //     assertTrue(ex == null);
+    // }
+
+
+    // /** Run performance test with 50% puts, 50% Gets */
+    // @Test
+    // public void test_50_50_5client() {
+    //     try {
+    //         for (int i = 0; i < 5; i++){
+    //             kvClientList.get(i).connect();
+    //         }
+    //     } catch (Exception e) {
+    //         System.err.println("ECS Performance Test Client Connection Failed!");
+    //     }
+
+    //     String key = "test";
+    //     KVMessage response = null;
+    //     Exception ex = null;
+    //     int loops = 20;
+    //     String output = "";
+    //     double totalBytes = 0;
+
+    //     // 1024 byte array
+    //     String value = createDataSize(1024);
+
+    //     // Start benchmark
+    //     long start = System.currentTimeMillis();
+
+    //     for (int i = 0; i < loops; i++) {
+    //         try {
+    //             for (int j = 0; j < 5; j++){
+    //                 if (j == 0 || j == 1){
+    //                     output = kvClientList.get(j).get(key).getValue();
+    //                 }
+    //                 else if (j == 2 || j == 3) {
+    //                     kvClientList.get(j).put(key, value);
+    //                 }
+    //             }
+    //         }catch (Exception e) {
+    //             System.out.println("Failed performance test!");
+    //             ex = e;
+    //         }
+    //     }
+
+    //     long timeElapsed = System.currentTimeMillis() - start;
+    //     System.out.println("Time Elapsed (ms):"+timeElapsed);
+
+    //     try{
+    //         totalBytes = loops * ((2 * value.getBytes("UTF-8").length) + 2*(output.getBytes("UTF-8").length));
+    //     }
+    //     catch (Exception e){
+    //         ex = e;
+    //     }
+
+    //     // time elapsed in ms, so multiply by 1000 to get per second
+    //     // totalbytes in bytes, so divide by 1000 to get kilobytes
+    //     double throughput = 1000 * (totalBytes / 1000) / timeElapsed;
+    //     double latency = timeElapsed / (loops * 4);
+
+    //     System.out.println("Throughput (50/50 5 Servers/FIFO 50/5 client): " + throughput + " KB/s");
+    //     System.out.println("Latency (50/50 5 Servers/FIFO 50/5 client)   : " + latency + " ms");
+
+    //     for (int i = 0; i < 5; i++){
+    //         kvClientList.get(i).disconnect();
+    //     }
+
+    //     assertTrue(ex == null);
+    // }
+
+
+    // /** Run performance test with 20% puts, 80% Gets */
+    // @Test
+    // public void test_20_80_5client() {
+    //     try {
+    //         for (int i = 0; i < 5; i++){
+    //             kvClientList.get(i).connect();
+    //         }
+    //     } catch (Exception e) {
+    //         System.err.println("ECS Performance Test Client Connection Failed!");
+    //     }
+
+    //     String key = "test";
+    //     KVMessage response = null;
+    //     Exception ex = null;
+    //     int loops = 20;
+    //     String output = "";
+    //     double totalBytes = 0;
+
+    //     // 1024 byte array
+    //     String value = createDataSize(1024);
+
+    //     // Start benchmark
+    //     long start = System.currentTimeMillis();
+
+    //     for (int i = 0; i < loops; i++) {
+    //         try {
+    //             for (int j = 0; j < 5; j++){
+    //                 if (j == 0){
+    //                     kvClientList.get(j).put(key, value);
+    //                 }
+    //                 else{
+    //                     output = kvClientList.get(j).get(key).getValue();
+    //                 }
+    //             }
+    //         }catch (Exception e) {
+    //             System.out.println("Failed performance test!");
+    //             ex = e;
+    //         }
+    //     }
+
+    //     long timeElapsed = System.currentTimeMillis() - start;
+    //     System.out.println("Time Elapsed (ms):"+timeElapsed);
+
+    //     try{
+    //         totalBytes = loops * ((1 * value.getBytes("UTF-8").length) + 4*(output.getBytes("UTF-8").length));
+    //     }
+    //     catch (Exception e){
+    //         ex = e;
+    //     }
+
+    //     // time elapsed in ms, so multiply by 1000 to get per second
+    //     // totalbytes in bytes, so divide by 1000 to get kilobytes
+    //     double throughput = 1000 * (totalBytes / 1000) / timeElapsed;
+    //     double latency = timeElapsed / (loops * 5);
+
+    //     System.out.println("Throughput (20 puts/80 gets 5 Servers/FIFO 50/5 client): " + throughput + " KB/s");
+    //     System.out.println("Latency (20 puts/80 gets 5 Servers/FIFO 50/5 client)   : " + latency + " ms");
+
+
+    //     for (int i = 0; i < 5; i++){
+    //         kvClientList.get(i).disconnect();
+    //     }
+
+    //     assertTrue(ex == null);
+    // }
+
+
+
+    // // ************************ Following section tests 20 clients ************************
+
+    // /** Run performance test with 80% puts, 20% Gets */
+    // @Test
+    // public void test_80_20_20client() {      
+    //     try {
+    //         for (int i = 0; i < 20; i++){
+    //             kvClientList.get(i).connect();
+    //         }
+    //         // kvClient1.connect();
+    //         // kvClient2.connect();
+    //         // kvClient3.connect();
+    //         // kvClient4.connect();
+    //         // kvClient5.connect();
+    //     } catch (Exception e) {
+    //         System.err.println("ECS Performance Test Client Connection Failed!");
+    //     }
+
+    //     String key = "test";
+    //     KVMessage response = null;
+    //     Exception ex = null;
+    //     int loops = 20;
+    //     String output = "";
+    //     double totalBytes = 0;
+
+    //     // 1024 byte array
+    //     String value = createDataSize(1024);
+
+    //     // Start benchmark
+    //     long start = System.currentTimeMillis();
+
+    //     for (int i = 0; i < loops; i++) {
+    //         try {
+    //             for (int j = 0; j < 20; j++){
+    //                 if (j == 16 || j == 17 || j == 18 || j == 19){
+    //                     output = kvClientList.get(j).get(key).getValue();
+    //                 }
+    //                 else{
+    //                     kvClientList.get(j).put(key, value);
+    //                 }
+    //             }
+    //         }catch (Exception e) {
+    //             System.out.println("Failed performance test!");
+    //             ex = e;
+    //         }
+    //     }
+
+    //     long timeElapsed = System.currentTimeMillis() - start;
+    //     System.out.println("Time Elapsed (ms):"+timeElapsed);
+
+    //     try{
+    //         totalBytes = loops * ((4 * value.getBytes("UTF-8").length) + output.getBytes("UTF-8").length);
+    //     }
+    //     catch (Exception e){
+    //         ex = e;
+    //     }
+
+    //     // time elapsed in ms, so multiply by 1000 to get per second
+    //     // totalbytes in bytes, so divide by 1000 to get kilobytes
+    //     double throughput = 1000 * (totalBytes / 1000) / timeElapsed;
+    //     double latency = timeElapsed / (loops * 5);
+
+    //     System.out.println("Throughput (80put/20get 5 Servers/FIFO 50/20 client): " + throughput + " KB/s");
+    //     System.out.println("Latency (80put/20get 5 Servers/FIFO 50/20 client)   : " + latency + " ms");
+
+    //     for (int i = 0; i < 20; i++){
+    //         kvClientList.get(i).disconnect();
+    //     }
+
+    //     // kvClient1.disconnect();
+    //     // kvClient2.disconnect();
+    //     // kvClient3.disconnect();
+    //     // kvClient4.disconnect();
+    //     // kvClient5.disconnect();
+
+    //     assertTrue(ex == null);
+    // }
+
+
+
+    // /** Run performance test with 50% puts, 50% Gets */
+    // @Test
+    // public void test_50_50_20client() {
+    //     try {
+    //         for (int i = 0; i < 20; i++){
+    //             kvClientList.get(i).connect();
+    //         }
+    //     } catch (Exception e) {
+    //         System.err.println("ECS Performance Test Client Connection Failed!");
+    //     }
+
+    //     String key = "test";
+    //     KVMessage response = null;
+    //     Exception ex = null;
+    //     int loops = 20;
+    //     String output = "";
+    //     double totalBytes = 0;
+
+    //     // 1024 byte array
+    //     String value = createDataSize(1024);
+
+    //     // Start benchmark
+    //     long start = System.currentTimeMillis();
+
+    //     for (int i = 0; i < loops; i++) {
+    //         try {
+    //             for (int j = 0; j < 5; j++){
+    //                 // 0, 2, 4, 6, 8, 10, 12, 14, 16, 18
+    //                 if (j % 2 == 0){
+    //                     output = kvClientList.get(j).get(key).getValue();
+    //                 }
+    //                 else{
+    //                     kvClientList.get(j).put(key, value);
+    //                 }
+    //             }
+    //         }catch (Exception e) {
+    //             System.out.println("Failed performance test!");
+    //             ex = e;
+    //         }
+    //     }
+
+    //     long timeElapsed = System.currentTimeMillis() - start;
+    //     System.out.println("Time Elapsed (ms):"+timeElapsed);
+
+    //     try{
+    //         totalBytes = loops * ((2 * value.getBytes("UTF-8").length) + 2*(output.getBytes("UTF-8").length));
+    //     }
+    //     catch (Exception e){
+    //         ex = e;
+    //     }
+
+    //     // time elapsed in ms, so multiply by 1000 to get per second
+    //     // totalbytes in bytes, so divide by 1000 to get kilobytes
+    //     double throughput = 1000 * (totalBytes / 1000) / timeElapsed;
+    //     double latency = timeElapsed / (loops * 4);
+
+    //     System.out.println("Throughput (50/50 5 Servers/FIFO 50/20 client): " + throughput + " KB/s");
+    //     System.out.println("Latency (50/50 5 Servers/FIFO 50/20 client)   : " + latency + " ms");
+
+    //     for (int i = 0; i < 20; i++){
+    //         kvClientList.get(i).disconnect();
+    //     }
+
+    //     assertTrue(ex == null);
+    // }
+
+
+    // /** Run performance test with 20% puts, 80% Gets */
+    // @Test
+    // public void test_20_80_20client() {
+    //     try {
+    //         for (int i = 0; i < 20; i++){
+    //             kvClientList.get(i).connect();
+    //         }
+    //     } catch (Exception e) {
+    //         System.err.println("ECS Performance Test Client Connection Failed!");
+    //     }
+
+    //     String key = "test";
+    //     KVMessage response = null;
+    //     Exception ex = null;
+    //     int loops = 20;
+    //     String output = "";
+    //     double totalBytes = 0;
+
+    //     // 1024 byte array
+    //     String value = createDataSize(1024);
+
+    //     // Start benchmark
+    //     long start = System.currentTimeMillis();
+
+    //     for (int i = 0; i < loops; i++) {
+    //         try {
+    //             for (int j = 0; j < 20; j++){
+    //                 if (j == 0 || j == 1 || j == 2 || j == 3){
+    //                     kvClientList.get(j).put(key, value);
+    //                 }
+    //                 else{
+    //                     output = kvClientList.get(j).get(key).getValue();
+    //                 }
+    //             }
+    //         }catch (Exception e) {
+    //             System.out.println("Failed performance test!");
+    //             ex = e;
+    //         }
+    //     }
+
+    //     long timeElapsed = System.currentTimeMillis() - start;
+    //     System.out.println("Time Elapsed (ms):"+timeElapsed);
+
+    //     try{
+    //         totalBytes = loops * ((1 * value.getBytes("UTF-8").length) + 4*(output.getBytes("UTF-8").length));
+    //     }
+    //     catch (Exception e){
+    //         ex = e;
+    //     }
+
+    //     // time elapsed in ms, so multiply by 1000 to get per second
+    //     // totalbytes in bytes, so divide by 1000 to get kilobytes
+    //     double throughput = 1000 * (totalBytes / 1000) / timeElapsed;
+    //     double latency = timeElapsed / (loops * 5);
+
+    //     System.out.println("Throughput (20 puts/80 gets 5 Servers/FIFO 50/20 client): " + throughput + " KB/s");
+    //     System.out.println("Latency (20 puts/80 gets 5 Servers/FIFO 50/20 client)   : " + latency + " ms");
+
+
+    //     for (int i = 0; i < 20; i++){
+    //         kvClientList.get(i).disconnect();
+    //     }
+
+    //     assertTrue(ex == null);
+    // }
 
 }

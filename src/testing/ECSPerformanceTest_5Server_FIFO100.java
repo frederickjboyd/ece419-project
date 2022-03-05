@@ -99,9 +99,16 @@ public class ECSPerformanceTest_5Server_FIFO100 extends TestCase {
     }
 
     public void tearDown() {
-        // System.out.println("Shutdown performance - start");
+        System.out.println("Shutdown performance - start");
         // kvClient.disconnect();
-        System.out.println("Shutdown performance - success");
+        try{
+            ecs.shutdown();
+            ecs.quit();
+            System.out.println("Shutdown performance - success");
+        }
+        catch (Exception e){
+            System.err.println("Failed to shut down ECS!");
+        }
     }
 
     /**Helper function to create data of specific size 
@@ -137,7 +144,7 @@ public class ECSPerformanceTest_5Server_FIFO100 extends TestCase {
         String key = "test";
         KVMessage response = null;
         Exception ex = null;
-        int loops = 150;
+        int loops = 20;
         String output = "";
         double totalBytes = 0;
 
@@ -206,7 +213,7 @@ public class ECSPerformanceTest_5Server_FIFO100 extends TestCase {
         String key = "test";
         KVMessage response = null;
         Exception ex = null;
-        int loops = 150;
+        int loops = 20;
         String output = "";
         double totalBytes = 0;
 
@@ -268,7 +275,7 @@ public class ECSPerformanceTest_5Server_FIFO100 extends TestCase {
         String key = "test";
         KVMessage response = null;
         Exception ex = null;
-        int loops = 150;
+        int loops = 20;
         String output = "";
         double totalBytes = 0;
 
@@ -341,7 +348,7 @@ public class ECSPerformanceTest_5Server_FIFO100 extends TestCase {
         String key = "test";
         KVMessage response = null;
         Exception ex = null;
-        int loops = 150;
+        int loops = 20;
         String output = "";
         double totalBytes = 0;
 
@@ -413,7 +420,7 @@ public class ECSPerformanceTest_5Server_FIFO100 extends TestCase {
         String key = "test";
         KVMessage response = null;
         Exception ex = null;
-        int loops = 150;
+        int loops = 20;
         String output = "";
         double totalBytes = 0;
 
@@ -479,7 +486,7 @@ public class ECSPerformanceTest_5Server_FIFO100 extends TestCase {
         String key = "test";
         KVMessage response = null;
         Exception ex = null;
-        int loops = 150;
+        int loops = 20;
         String output = "";
         double totalBytes = 0;
 
@@ -554,7 +561,7 @@ public class ECSPerformanceTest_5Server_FIFO100 extends TestCase {
         String key = "test";
         KVMessage response = null;
         Exception ex = null;
-        int loops = 150;
+        int loops = 20;
         String output = "";
         double totalBytes = 0;
 
@@ -627,7 +634,7 @@ public class ECSPerformanceTest_5Server_FIFO100 extends TestCase {
         String key = "test";
         KVMessage response = null;
         Exception ex = null;
-        int loops = 150;
+        int loops = 20;
         String output = "";
         double totalBytes = 0;
 
@@ -694,7 +701,7 @@ public class ECSPerformanceTest_5Server_FIFO100 extends TestCase {
         String key = "test";
         KVMessage response = null;
         Exception ex = null;
-        int loops = 150;
+        int loops = 20;
         String output = "";
         double totalBytes = 0;
 

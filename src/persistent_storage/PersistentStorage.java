@@ -11,7 +11,6 @@ import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 
 public class PersistentStorage implements IPersistentStorage {
-
     // Initialize logger
     private static Logger logger = Logger.getRootLogger();
     // Synchronized Hash map
@@ -89,25 +88,6 @@ public class PersistentStorage implements IPersistentStorage {
         // Activate synchronized map
         this.referenceMap = Collections.synchronizedMap(tempMap);
     }
-
-    // // Saving a map
-    // Map<String, String> ldapContent = new HashMap<String, String>();
-    // Properties properties = new Properties();
-
-    // for (Map.Entry<String,String> entry : ldapContent.entrySet()) {
-    // properties.put(entry.getKey(), entry.getValue());
-    // }
-
-    // properties.store(new FileOutputStream("data.properties"), null);
-
-    // // loading a map
-    // Map<String, String> ldapContent = new HashMap<String, String>();
-    // Properties properties = new Properties();
-    // properties.load(new FileInputStream("data.properties"));
-
-    // for (String key : properties.stringPropertyNames()) {
-    // ldapContent.put(key, properties.get(key).toString());
-    // }
 
     /** Write the current map to disk */
     private synchronized void writeMap() {
@@ -288,7 +268,6 @@ public class PersistentStorage implements IPersistentStorage {
         }
     }
 
-
     /**
      * Grab KV Pairs from current server db and check if in valid range.
      * If REACHABLE, return in new table.
@@ -321,7 +300,6 @@ public class PersistentStorage implements IPersistentStorage {
         }
         return newTable;
     }
-
 
     /**
      * Grab KV Pairs from current server db and check if in valid range.
@@ -356,7 +334,7 @@ public class PersistentStorage implements IPersistentStorage {
         return newTable;
     }
 
-        /**
+    /**
      * Grab KV Pairs from current server db and return
      * 
      * @return

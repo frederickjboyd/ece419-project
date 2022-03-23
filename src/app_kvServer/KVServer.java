@@ -298,8 +298,9 @@ public class KVServer implements IKVServer, Runnable {
 
             // // Process the admin Message
             // String adminMessageString = new String(adminMessageBytes,
-            //         StandardCharsets.UTF_8);
-            // logger.info("This is the incoming OUTER admin message string: " + adminMessageString);
+            // StandardCharsets.UTF_8);
+            // logger.info("This is the incoming OUTER admin message string: " +
+            // adminMessageString);
             // handleAdminMessageHelper(adminMessageString);
         } catch (KeeperException | InterruptedException e) {
             logger.error("Failed to process ZK metadata: ", e);
@@ -609,76 +610,6 @@ public class KVServer implements IKVServer, Runnable {
     public boolean getLockWrite() {
         return locked;
     }
-
-    // /**
-    // * Transfer a subset (range) of the KVServer’s data to another KVServer
-    // * (reallocation before removing this server or adding a new KVServer to the
-    // ring);
-    // * send a notification to the ECS, if data transfer is completed.
-    // *
-    // * @param adminMessageString Admin message string from communications
-    // */
-    // @Override
-    // public void moveData(String adminMessageString) {
-    // // Process incoming admin message
-    // AdminMessage incomingMessage = new AdminMessage(adminMessageString);
-    // Map<String, Metadata> incomingMetadataMap = incomingMessage.getMsgMetadata();
-    // Metadata incomingMetadata = incomingMetadataMap.get(hashedName);
-
-    // // ************ Move data to target server ************
-
-    // // Original start
-    // BigInteger originalBegin = localMetadata.getHashStart();
-    // // Original Stop
-    // BigInteger originalEnd = localMetadata.getHashStop();
-
-    // Map<String, String> invalidKVPairs = null;
-
-    // if (localMetadata != null &&
-    // !localMetadata.stop.equals(incomingMetadata.stop)){
-    // BigInteger stop = serverMetadata.getHashStop;
-    // BigInteger newStop = serverMetadatasMap.get(stop.toString()).getHashStop;
-    // invalidKVPairs = hashReachable(stop, newStop);
-    // }
-
-    // // Acquire write lock
-    // lockWrite();
-
-    // // Get unreachable entries based on current hash range
-    // Map<String, String> unreachableEntries = storage.hashUnreachable(begin, end);
-    // // Iterate through unreachable entries
-    // Iterator itr = unreachableEntries.entrySet().iterator();
-
-    // // Get metadata of destination server
-    // Metadata transferServerMetadata = allMetadata.get(end.toString());
-    // // Build destination server name
-    // String transferServerName = zooPathRoot + "/" +
-    // transferServerMetadata.getHost() + ":"
-    // + transferServerMetadata.getPort();
-    // try {
-    // // Send admin message to destination
-    // // Need to confirm enums in MessageType, if TRANSFER_DATA available
-    // sendMessage(MessageType.TRANSFER_DATA, null, unreachableEntries,
-    // transferServerName);
-    // } catch (InterruptedException | KeeperException e) {
-    // logger.error("Failed to send admin message with unreachable entries: ", e);
-    // }
-
-    // // Remove unreachable KV Pairs from this server
-    // while (itr.hasNext()) {
-    // Map.Entry keyVal = (Map.Entry) itr.next();
-    // String key = (String) keyVal.getKey();
-    // if (!storage.keyValid(storage.MD5Hash(key), begin, end)) {
-    // storage.delete(key);
-    // } else {
-    // logger.error("Failed to remove unreachable KV pair from disk - reachable
-    // conflict!");
-    // }
-    // }
-
-    // // Release write lock
-    // unLockWrite();
-    // }
 
     /**
      * Initialize KV Server with initial metadata

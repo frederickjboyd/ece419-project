@@ -12,10 +12,11 @@ public class kvCacheOperator {
 
     /**
      * Initialize cache
-     * @param size Desired cache size 
+     * 
+     * @param size     Desired cache size
      * @param strategy Desired cache strategy
      */
-    public kvCacheOperator (int size, String strategy) {
+    public kvCacheOperator(int size, String strategy) {
         // Least recently used
         if (strategy == "LRU") {
             cache = new LRUCache(size);
@@ -41,6 +42,7 @@ public class kvCacheOperator {
 
     /**
      * Return status of cache
+     * 
      * @return If active, return true, else false
      */
     public boolean cacheActiveStatus() {
@@ -49,6 +51,7 @@ public class kvCacheOperator {
 
     /**
      * Try and retrieve a value from the cache
+     * 
      * @param key Key for desired value
      * @return
      */
@@ -64,11 +67,9 @@ public class kvCacheOperator {
                     logger.info("Key not in cache: K:" + key);
                     return null;
                 }
-            }
-            else
+            } else
                 logger.error("Cache is not initialized, can't read!");
-        }
-        catch (Exception e) {
+        } catch (Exception e) {
             logger.error("Cache read failure!", e);
         }
         return value;
@@ -76,7 +77,8 @@ public class kvCacheOperator {
 
     /**
      * Put KV pair in cache
-     * @param key key to be used
+     * 
+     * @param key   key to be used
      * @param value value to be placed
      */
     public void putCache(String key, String value) {
@@ -84,24 +86,22 @@ public class kvCacheOperator {
             if (cache != null) {
                 cache.write(key, value);
                 logger.info("Succesfully wrote key-val to cache: K:" + key + ",V:" + value);
-            }
-            else
+            } else
                 logger.error("Cache is not initialized, can't write!");
-        }
-        catch (Exception e) {
+        } catch (Exception e) {
             logger.error("Cache write failure!", e);
         }
     }
 
     /**
      * Remove entry from cache
+     * 
      * @param key
      */
     public void delete(String key) {
         if (cache != null) {
             cache.delete(key);
-        }
-        else{
+        } else {
             logger.error("Cache is not initialized, can't delete!");
         }
     }
@@ -109,8 +109,7 @@ public class kvCacheOperator {
     public boolean inCache(String key) {
         if (cache != null) {
             return cache.inCache(key);
-        }
-        else {
+        } else {
             logger.error("Cache is not initialized, can't check exists!");
             return false;
         }
@@ -119,13 +118,12 @@ public class kvCacheOperator {
     public void clearCache() {
         if (cache != null) {
             cache.clearCache();
-        }
-        else{
+        } else {
             logger.error("Cache is not initialized, can't clear!");
         }
     }
 
-    public static void main(String [] args) {
+    public static void main(String[] args) {
         System.out.println("Cache test");
     }
 }

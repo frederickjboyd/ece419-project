@@ -4,7 +4,7 @@ import app_kvServer.kvCache.kvCacheTypes;
 import java.util.*;
 import java.util.Collections;
 
-public class LFUCache extends kvCacheTypes{
+public class LFUCache extends kvCacheTypes {
     // Frequency list for cache entries
     private Map<String, Integer> frequency;
     // Cache map itself
@@ -12,6 +12,7 @@ public class LFUCache extends kvCacheTypes{
 
     /**
      * Initialize FIFO cache
+     * 
      * @param size desired cache size
      */
     public LFUCache(int size) {
@@ -26,14 +27,13 @@ public class LFUCache extends kvCacheTypes{
     @Override
     public String read(String key) {
         synchronized (cache) {
-            synchronized (frequency){
+            synchronized (frequency) {
                 if (cache.containsKey(key)) {
                     int tempFreq = frequency.get(key) + 1;
                     // Accumulate another access on this key
                     frequency.put(key, tempFreq);
                     return cache.get(key);
-                }
-                else {
+                } else {
                     return null;
                 }
             }
@@ -43,7 +43,8 @@ public class LFUCache extends kvCacheTypes{
     /**
      * Sort Treemap helper
      * See https://stackoverflow.com/questions/2864840/treemap-sort-by-value
-     * @param <K> Key   
+     * 
+     * @param <K> Key
      * @param <V> Value
      * @param map
      * @return Map sorted by frequency
@@ -51,26 +52,24 @@ public class LFUCache extends kvCacheTypes{
     public static <K, V extends Comparable<V>> Map<K, V> entriesSortedByValues(final Map<K, V> map) {
         // Comparator for comparing frequencies in map
         Comparator<K> comparison = new Comparator<K>() {
-                    public int compare(K key1, K key2) {
-                        int compare = map.get(key1).compareTo(map.get(key2));
-                        if (compare == 0){
-                            return 1;
-                        }
-                        else{
-                            return compare;
-                        }
-                    }
-                };
+            public int compare(K key1, K key2) {
+                int compare = map.get(key1).compareTo(map.get(key2));
+                if (compare == 0) {
+                    return 1;
+                } else {
+                    return compare;
+                }
+            }
+        };
         Map<K, V> sortedFreq = new TreeMap<K, V>(comparison);
         sortedFreq.putAll(map);
         return sortedFreq;
     }
 
-
     @Override
     public void write(String key, String value) {
         synchronized (cache) {
-            synchronized (frequency){
+            synchronized (frequency) {
                 // We are full, kick out least frequently used entry
                 if (currentLoad == cacheCapacity) {
                     synchronized (cache) {
@@ -93,7 +92,7 @@ public class LFUCache extends kvCacheTypes{
     @Override
     public void delete(String key) {
         synchronized (cache) {
-            synchronized (frequency){
+            synchronized (frequency) {
                 cache.remove(key);
                 frequency.remove(key);
                 currentLoad = currentLoad - 1;
@@ -105,15 +104,14 @@ public class LFUCache extends kvCacheTypes{
     public boolean inCache(String key) {
         synchronized (cache) {
             Set cacheSet = cache.keySet();
-            if (cacheSet.contains(key) == true){
+            if (cacheSet.contains(key) == true) {
                 return true;
-            }
-            else{
+            } else {
                 return false;
             }
         }
     }
-    
+
     /**
      * Clear all load in cache
      */

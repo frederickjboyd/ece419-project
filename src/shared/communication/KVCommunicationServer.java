@@ -153,12 +153,11 @@ public class KVCommunicationServer extends KVCommunicationClient implements Runn
 
                 if (msg.getValue().equals("") || msg.getValue().equals("null")) { // Delete
                     logger.trace("PUT DELETE");
-                    
 
                     try {
                         server.putKV(msgKey, "");
                         returnMsgType = StatusType.DELETE_SUCCESS;
-                        
+
                     } catch (Exception e) {
                         returnMsgType = StatusType.DELETE_ERROR;
                         logger.error(String.format("%s: %s", returnMsgType.toString(), msgKey));

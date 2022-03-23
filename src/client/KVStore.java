@@ -87,24 +87,11 @@ public class KVStore {
             kvCommunication.sendMessage(kvmessage);
             kvmessageReceived = kvCommunication.receiveMessage();
         }
-        // try {
-        //     kvmessageReceived = kvCommunication.receiveMessage();
-        // } catch (IOException e){
-        //     logger.error("get msg receive failed!", e);
-        //     kvmessageReceived=checkServer(kvmessage);
-        // }
-
-        // checkAndUpdateServer(kvmessageReceived, key);
-        // kvCommunication.sendMessage(kvmessage);
-        // kvmessageReceived = kvCommunication.receiveMessage();
 
         return kvmessageReceived;
     }
 
     public KVMessage put(String key, String value) throws Exception {
-        // System.out.println(key);
-        // System.out.println(value);
-
         KVMessage kvmessage = new KVMessage(StatusType.PUT, key, value);
         kvCommunication.sendMessage(kvmessage);
         KVMessage kvmessageReceived = null;
@@ -115,22 +102,8 @@ public class KVStore {
             checkAndUpdateServer(kvmessageReceived, key);
             kvCommunication.sendMessage(kvmessage);
             kvmessageReceived = kvCommunication.receiveMessage();
-        
+
         }
-
-        // try {
-        //     kvmessageReceived = kvCommunication.receiveMessage();
-        // } catch (IOException e){
-        //     logger.error("put msg receive failed!", e);
-        //     kvmessageReceived=checkServer(kvmessage);
-
-        // }
-        // checkAndUpdateServer(kvmessageReceived, key);
-
-        // kvCommunication.sendMessage(kvmessage);
-        // kvmessageReceived = kvCommunication.receiveMessage();
-
-
 
         return kvmessageReceived;
     }
@@ -157,10 +130,13 @@ public class KVStore {
                 BigInteger begin = obj.getHashStart();
                 BigInteger end = obj.getHashStop();
 
-                if ((begin.compareTo(end) != 1) && (hexkeyInt.compareTo(begin) == 1) && (hexkeyInt.compareTo(end) == -1) ||
-                (begin.compareTo(end) != -1) && (hexkeyInt.compareTo(begin) == -1) && (hexkeyInt.compareTo(end) == -1) ||
-                (begin.compareTo(end) != -1) && (hexkeyInt.compareTo(begin) == 1) && (hexkeyInt.compareTo(end) == 1)) 
-                {
+                if ((begin.compareTo(end) != 1) && (hexkeyInt.compareTo(begin) == 1) && (hexkeyInt.compareTo(end) == -1)
+                        ||
+                        (begin.compareTo(end) != -1) && (hexkeyInt.compareTo(begin) == -1)
+                                && (hexkeyInt.compareTo(end) == -1)
+                        ||
+                        (begin.compareTo(end) != -1) && (hexkeyInt.compareTo(begin) == 1)
+                                && (hexkeyInt.compareTo(end) == 1)) {
                     disconnect();
                     address = obj.getHost();
                     port = obj.getPort();
@@ -175,7 +151,7 @@ public class KVStore {
                     } catch (Exception e) {
                         address = originServerAddress;
                         port = originServerPort;
-                        
+
                         try {
                             connect();
                         } catch (Exception ex) {
@@ -184,7 +160,7 @@ public class KVStore {
                         logger.error("new connection failed, origin server and port connection restored");
                     }
                     // break;
-                    
+
                     return;
                 }
             }
@@ -194,7 +170,6 @@ public class KVStore {
                         .format("updated metadata also doesn't have server or port corresponding to this action");
                 System.out.println(errorMsg);
                 logger.error(errorMsg);
-                // throw new Exception("Cannot find avaliable server to connect");
                 return;
             }
         }
@@ -204,20 +179,20 @@ public class KVStore {
     public List<Metadata> returnCurrentMetadata() {
         return metadata;
     }
+
     public boolean isRunning() {
         return (kvCommunication != null) && (kvCommunication.getIsOpen());
     }
 
-    
     public KVMessage checkServer(KVMessage msg) throws Exception {
-		System.out.println("Server not found, searching and reconnecting");
-		logger.info("Server not found, searching and reconnecting");
+        System.out.println("Server not found, searching and reconnecting");
+        logger.info("Server not found, searching and reconnecting");
 
-		if (metadata == null) {
-			throw new Exception("Metadata empty, no server available");
+        if (metadata == null) {
+            throw new Exception("Metadata empty, no server available");
         }
 
-		KVMessage kvmessageReceived = null;
+        KVMessage kvmessageReceived = null;
 
         int i;
         for (i = 0; i < metadata.size(); i++) {
@@ -246,7 +221,7 @@ public class KVStore {
             // break;
         }
 
-        if (i>=metadata.size()) {
+        if (i >= metadata.size()) {
             throw new Exception("No server available");
 
         }

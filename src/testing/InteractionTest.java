@@ -1,5 +1,4 @@
 package testing;
-import org.apache.log4j.Logger;
 
 import org.junit.Test;
 import java.util.List;
@@ -37,7 +36,7 @@ public class InteractionTest extends TestCase {
         } catch (Exception e) {
             System.out.println("ECS Performance Test failed on ECSClient init: " + e);
         }
-        
+
         host = nodesAdded.get(0).getNodeHost();
         port = nodesAdded.get(0).getNodePort();
 
@@ -119,7 +118,6 @@ public class InteractionTest extends TestCase {
         KVMessage response = null;
         Exception ex = null;
         // Logger logger = Logger.getRootLogger();
-
 
         try {
             kvClient.put(key, value);

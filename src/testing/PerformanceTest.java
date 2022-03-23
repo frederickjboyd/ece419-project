@@ -29,17 +29,19 @@ public class PerformanceTest extends TestCase {
 
     }
 
-    /**Helper function to create data of specific size 
-    * @param msgSize Size of desired data
-    */
+    /**
+     * Helper function to create data of specific size
+     * 
+     * @param msgSize Size of desired data
+     */
     public static String createDataSize(int msgSize) {
         StringBuilder sb = new StringBuilder(msgSize);
-        for (int i=0; i<msgSize; i++) {
-          sb.append('a');
+        for (int i = 0; i < msgSize; i++) {
+            sb.append('a');
         }
         return sb.toString();
-      }
-    
+    }
+
     /** Run performance test with 80% puts, 20% Gets */
     @Test
     public void test_80_20() {
@@ -63,19 +65,18 @@ public class PerformanceTest extends TestCase {
                 kvClient.put(key, value);
                 kvClient.put(key, value);
                 output = kvClient.get(key).getValue();
-            }catch (Exception e) {
+            } catch (Exception e) {
                 System.out.println("Failed performance test!");
                 ex = e;
             }
         }
 
         long timeElapsed = System.currentTimeMillis() - start;
-        System.out.println("Time Elapsed (ms):"+timeElapsed);
+        System.out.println("Time Elapsed (ms):" + timeElapsed);
 
-        try{
+        try {
             totalBytes = loops * ((4 * value.getBytes("UTF-8").length) + output.getBytes("UTF-8").length);
-        }
-        catch (Exception e){
+        } catch (Exception e) {
             ex = e;
         }
 
@@ -88,8 +89,6 @@ public class PerformanceTest extends TestCase {
         System.out.println("Latency (80put/20get)   : " + latency + " ms");
         assertTrue(ex == null);
     }
-
-
 
     /** Run performance test with 50% puts, 50% Gets */
     @Test
@@ -111,22 +110,21 @@ public class PerformanceTest extends TestCase {
             try {
                 kvClient.put(key, value);
                 kvClient.put(key, value);
- 
+
                 output = kvClient.get(key).getValue();
                 output = kvClient.get(key).getValue();
-            }catch (Exception e) {
+            } catch (Exception e) {
                 System.out.println("Failed performance test!");
                 ex = e;
             }
         }
 
         long timeElapsed = System.currentTimeMillis() - start;
-        System.out.println("Time Elapsed (ms):"+timeElapsed);
+        System.out.println("Time Elapsed (ms):" + timeElapsed);
 
-        try{
-            totalBytes = loops * ((2 * value.getBytes("UTF-8").length) + 2*(output.getBytes("UTF-8").length));
-        }
-        catch (Exception e){
+        try {
+            totalBytes = loops * ((2 * value.getBytes("UTF-8").length) + 2 * (output.getBytes("UTF-8").length));
+        } catch (Exception e) {
             ex = e;
         }
 
@@ -139,7 +137,6 @@ public class PerformanceTest extends TestCase {
         System.out.println("Latency (50/50)   : " + latency + " ms");
         assertTrue(ex == null);
     }
-
 
     /** Run performance test with 20% puts, 80% Gets */
     @Test
@@ -165,19 +162,18 @@ public class PerformanceTest extends TestCase {
                 output = kvClient.get(key).getValue();
                 output = kvClient.get(key).getValue();
                 output = kvClient.get(key).getValue();
-            }catch (Exception e) {
+            } catch (Exception e) {
                 System.out.println("Failed performance test!");
                 ex = e;
             }
         }
 
         long timeElapsed = System.currentTimeMillis() - start;
-        System.out.println("Time Elapsed (ms):"+timeElapsed);
+        System.out.println("Time Elapsed (ms):" + timeElapsed);
 
-        try{
-            totalBytes = loops * ((1 * value.getBytes("UTF-8").length) + 4*(output.getBytes("UTF-8").length));
-        }
-        catch (Exception e){
+        try {
+            totalBytes = loops * ((1 * value.getBytes("UTF-8").length) + 4 * (output.getBytes("UTF-8").length));
+        } catch (Exception e) {
             ex = e;
         }
 

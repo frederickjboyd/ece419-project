@@ -254,23 +254,7 @@ public class KVMessage implements IKVMessage, Serializable {
             return null;
         }
 
-        // call sth like metadataHashmap = getMetaData() associated with server and will
-        // get hashmap metadataMap
-        // ArrayList<Metadata> metadata_list = new ArrayList<>();
-
-        // Map<String, Metadata> metadataHashmap = AdminMessage.getMsgMetadata(); //
-        // NEED TO CHECK STILLLL
-
-        // for (Metadata value : metadataHashmap.values()) {
-        // Metadata temp = value;
-        // metadata_list.add(temp);
-        // }
-        // return metadata_list;
-
         JSONObject metadata_jo = new JSONObject(value);
-        // System.out.println("sdfghjklkjhgfghjklkjhghjklkjhhjkl");
-
-        // System.out.println(value);
         ArrayList<Metadata> metadata_list = new ArrayList<>();
         Iterator<String> keys = metadata_jo.keys();
 

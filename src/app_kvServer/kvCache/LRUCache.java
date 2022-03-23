@@ -3,13 +3,14 @@ package app_kvServer.kvCache;
 import app_kvServer.kvCache.kvCacheTypes;
 import java.util.*;
 
-public class LRUCache extends kvCacheTypes{
+public class LRUCache extends kvCacheTypes {
 
     // Cache map itself
     private Map<String, String> cache;
 
     /**
      * Initialize FIFO cache
+     * 
      * @param size desired cache size
      */
     public LRUCache(int size) {
@@ -23,8 +24,7 @@ public class LRUCache extends kvCacheTypes{
         synchronized (cache) {
             if (cache.containsKey(key)) {
                 return cache.get(key);
-            }
-            else {
+            } else {
                 return null;
             }
         }
@@ -58,15 +58,14 @@ public class LRUCache extends kvCacheTypes{
     public boolean inCache(String key) {
         synchronized (cache) {
             Set cacheSet = cache.keySet();
-            if (cacheSet.contains(key) == true){
+            if (cacheSet.contains(key) == true) {
                 return true;
-            }
-            else{
+            } else {
                 return false;
             }
         }
     }
-    
+
     /**
      * Clear all load in cache
      */

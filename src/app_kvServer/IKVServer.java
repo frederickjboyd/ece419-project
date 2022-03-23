@@ -144,12 +144,14 @@ public interface IKVServer {
 
     /**
      * Process an incoming data transfer
+     * 
      * @param adminMessageString
      */
     public void processDataTransfer(String adminMessageString);
-    
+
     /**
      * Confirmation message from recipient server that received data
+     * 
      * @param adminMessageString
      */
     public void confirmDataTransfer(String adminMessageString);

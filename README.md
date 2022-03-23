@@ -1,7 +1,7 @@
 # ece419-project
-UofT Distributed Systems Project
-
 ![example workflow](https://github.com/frederickjboyd/ece419-project/actions/workflows/ant.yml/badge.svg)
+
+UofT Distributed Systems Project
 
 **Test Run**
 To start ECS: `java -jar m2-ecs.jar ecs.config`

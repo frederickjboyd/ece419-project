@@ -22,10 +22,12 @@ public class AdditionalTest extends TestCase {
     private KVStore kvClient2;
 
     public void setUp() {
-        Exception ex = null;
         // CacheStrategy cacheStrategy = CacheStrategy.FIFO;
 
         // kvClient = new KVStore("localhost", 50000);
+        // Workaround to fix build errors
+        String host = "localhost";
+        int port = 50000;
         kvClient = new KVStore(host, port);
         try {
             kvClient.connect();

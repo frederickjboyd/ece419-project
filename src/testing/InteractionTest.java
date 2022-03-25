@@ -11,11 +11,10 @@ import shared.communication.IKVMessage.StatusType;
 import app_kvECS.ECSClient;
 
 public class InteractionTest extends TestCase {
-
     private KVStore kvClient;
+    private ECSClient ecs;
 
     public void setUp() {
-        Exception ex = null;
         // CacheStrategy cacheStrategy = CacheStrategy.FIFO;
         String cacheStrategy = "FIFO";
 
@@ -26,7 +25,6 @@ public class InteractionTest extends TestCase {
         String ECSConfigPath = System.getProperty("user.dir") + "/ecs.config";
 
         List<ECSNode> nodesAdded;
-        ECSClient ecs;
 
         // List<ECSNode> nodesAdded = new ArrayList<ECSNode>()
         ecs = new ECSClient(ECSConfigPath);
@@ -46,6 +44,7 @@ public class InteractionTest extends TestCase {
         try {
             kvClient.connect();
         } catch (Exception e) {
+            e.printStackTrace();
         }
         System.out.println("set up success");
 
@@ -53,6 +52,11 @@ public class InteractionTest extends TestCase {
 
     public void tearDown() {
         kvClient.disconnect();
+        try {
+            ecs.shutdown();
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
     }
 
     @Test

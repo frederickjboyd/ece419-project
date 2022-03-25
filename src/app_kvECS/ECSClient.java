@@ -16,17 +16,19 @@ import org.apache.zookeeper.ZooDefs;
 import org.apache.zookeeper.ZooKeeper;
 
 import java.util.Map;
-import java.util.Random;
+import java.util.Properties;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.io.BufferedReader;
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.FileReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.math.BigInteger;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 
@@ -183,14 +185,11 @@ public class ECSClient implements IECSClient {
         CacheStrategy cacheStrategyEnum = CacheStrategy.valueOf(cacheStrategyStr.toUpperCase());
         List<ECSNode> nodesAdded = new ArrayList<ECSNode>();
         List<String> serverInfoAdded = new ArrayList<String>();
-        Random rand = new Random();
         List<String> availableServers = getAvailableServers();
         List<ECSNode> serversToAdd = new ArrayList<ECSNode>();
 
         for (int i = 0; i < count; i++) {
-            // Randomly select a new, available server to add
-            int randIdx = rand.nextInt(availableServers.size());
-            String newServerInfo = availableServers.get(randIdx);
+            String newServerInfo = availableServers.get(0);
             logger.debug(String.format("Adding server: %s", newServerInfo));
             serverStatusInfo.put(newServerInfo, NodeStatus.IDLE);
             unavailableServers.add(newServerInfo);
@@ -515,6 +514,21 @@ public class ECSClient implements IECSClient {
             e.printStackTrace();
         }
 
+        // Clean up ZooKeeper files
+        // Get directory
+        Properties prop = new Properties();
+        try (FileInputStream fis = new FileInputStream(ZK_CONF_PATH)) {
+            prop.load(fis);
+        } catch (Exception e) {
+            logger.error("Unable to clean up ZooKeeper files");
+            e.printStackTrace();
+        }
+
+        // Delete contents
+        String zkPath = prop.getProperty("dataDir");
+        File zkDir = new File(zkPath);
+        deleteDirectory(zkDir);
+
         // Manually kill all "java" processes
         // Get username
         String homeDir = System.getProperty("user.home");
@@ -525,7 +539,6 @@ public class ECSClient implements IECSClient {
         List<Integer> javaPrograms = null;
 
         try {
-            System.out.println("Executing: " + cmd);
             Process p = Runtime.getRuntime().exec(cmd);
             BufferedReader stdIn = new BufferedReader(new InputStreamReader(p.getInputStream()));
             javaPrograms = parseProcessList(stdIn);
@@ -555,6 +568,21 @@ public class ECSClient implements IECSClient {
         }
 
         DebugHelper.logFuncExit(logger);
+    }
+
+    /**
+     * Recursively delete all contents of a directory.
+     * 
+     * @param f
+     */
+    private void deleteDirectory(File f) {
+        for (File subfile : f.listFiles()) {
+            if (subfile.isDirectory()) {
+                deleteDirectory(subfile);
+            }
+
+            subfile.delete();
+        }
     }
 
     /**
@@ -631,6 +659,7 @@ public class ECSClient implements IECSClient {
             }
         }
 
+        Collections.sort(availableServers);
         DebugHelper.logFuncExit(logger);
 
         return availableServers;
@@ -852,7 +881,7 @@ public class ECSClient implements IECSClient {
         sb.append("::::::::::::::::::::::::::::::::");
         sb.append("::::::::::::::::::::::::::::::::\n");
         sb.append(PROMPT).append("addnodes <num> <cacheStrategy> <cacheSize>");
-        sb.append("\t Randomly choose <num> nodes from available machines and start them \n");
+        sb.append("\t Choose <num> nodes from available machines and start them \n");
 
         sb.append(PROMPT).append("addnode <cacheStrategy> <cacheSize>");
         sb.append("\t Create new KVServer and add it to the storage service at an arbitrary position \n");

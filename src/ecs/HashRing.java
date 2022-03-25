@@ -191,9 +191,9 @@ public class HashRing {
                 nextNode.getNodePort()));
         // Next server is now responsible for current node's hash range
         BigInteger[] nextNodeHashRange = nextNode.getNodeHashRange();
-        logger.debug(String.format("nextNode old hash range: %s", Arrays.toString(nextNodeHashRange)));
+        logger.debug(String.format("nextNode old hash range: [%x, %x]", nextNodeHashRange[0], nextNodeHashRange[1]));
         nextNodeHashRange[0] = node.getNodeHashRange()[0];
-        logger.debug(String.format("nextNode new hash range: %s", Arrays.toString(nextNodeHashRange)));
+        logger.debug(String.format("nextNode new hash range: [%x, %x]", nextNodeHashRange[0], nextNodeHashRange[1]));
 
         prevNode.setNextNodeID(nextNodeID);
         nextNode.setPrevNodeID(prevNodeID);

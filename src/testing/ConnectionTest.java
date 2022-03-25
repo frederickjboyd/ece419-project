@@ -3,9 +3,7 @@ package testing;
 import java.net.UnknownHostException;
 
 import client.KVStore;
-import app_kvECS.*;
-import app_kvServer.IKVServer;
-import app_kvServer.IKVServer.CacheStrategy;
+import app_kvECS.ECSClient;
 import ecs.ECSNode;
 import junit.framework.TestCase;
 import java.util.List;
@@ -13,7 +11,6 @@ import java.util.List;
 public class ConnectionTest extends TestCase {
 
     public void testConnectionSuccess() {
-
         Exception ex = null;
         // CacheStrategy cacheStrategy = CacheStrategy.FIFO;
         String cacheStrategy = "FIFO";

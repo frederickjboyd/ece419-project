@@ -47,7 +47,7 @@ import shared.Metadata;
 public class ECSClient implements IECSClient {
     // Prevent external libraries from spamming console
     public static Logger logger = Logger.getLogger(ECSClient.class);
-    private static Level logLevel = Level.TRACE;
+    private static Level logLevel = Level.ERROR;
 
     private boolean running = false;
     private boolean zkServerRunning = false;

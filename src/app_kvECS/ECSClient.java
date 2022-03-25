@@ -226,12 +226,12 @@ public class ECSClient implements IECSClient {
                 logger.error("Unable to start or connect to KVServer.");
                 e.printStackTrace();
             }
+        }
 
-            try {
-                awaitNodes(1, ZK_TIMEOUT);
-            } catch (Exception e) {
-                logger.error("awaitNodes failed");
-            }
+        try {
+        awaitNodes(count, ZK_TIMEOUT);
+        } catch (Exception e) {
+        logger.error("awaitNodes failed");
         }
 
         setupNodes(count, cacheStrategyEnum, cacheSize, serverInfoAdded);

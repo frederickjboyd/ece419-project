@@ -16,17 +16,19 @@ import org.apache.zookeeper.ZooDefs;
 import org.apache.zookeeper.ZooKeeper;
 
 import java.util.Map;
-import java.util.Random;
+import java.util.Properties;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.io.BufferedReader;
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.FileReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.math.BigInteger;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 
@@ -45,7 +47,7 @@ import shared.Metadata;
 public class ECSClient implements IECSClient {
     // Prevent external libraries from spamming console
     public static Logger logger = Logger.getLogger(ECSClient.class);
-    private static Level logLevel = Level.TRACE;
+    private static Level logLevel = Level.ERROR;
 
     private boolean running = false;
     private boolean zkServerRunning = false;
@@ -58,7 +60,7 @@ public class ECSClient implements IECSClient {
     public static final String ZK_ROOT_PATH = "/zkRoot";
     private static final String ZK_CONF_PATH = "zoo.cfg";
     private static final String SERVER_DIR = "~/ece419-project";
-    private static final String SERVER_JAR = "m2-server.jar";
+    private static final String SERVER_JAR = "m3-server.jar";
     private static final int ZK_PORT = 2181;
     private static final String ZK_HOST = "localhost";
     private static final int ZK_TIMEOUT = 2000;
@@ -183,14 +185,11 @@ public class ECSClient implements IECSClient {
         CacheStrategy cacheStrategyEnum = CacheStrategy.valueOf(cacheStrategyStr.toUpperCase());
         List<ECSNode> nodesAdded = new ArrayList<ECSNode>();
         List<String> serverInfoAdded = new ArrayList<String>();
-        Random rand = new Random();
         List<String> availableServers = getAvailableServers();
         List<ECSNode> serversToAdd = new ArrayList<ECSNode>();
 
         for (int i = 0; i < count; i++) {
-            // Randomly select a new, available server to add
-            int randIdx = rand.nextInt(availableServers.size());
-            String newServerInfo = availableServers.get(randIdx);
+            String newServerInfo = availableServers.get(0);
             logger.debug(String.format("Adding server: %s", newServerInfo));
             serverStatusInfo.put(newServerInfo, NodeStatus.IDLE);
             unavailableServers.add(newServerInfo);
@@ -227,12 +226,12 @@ public class ECSClient implements IECSClient {
                 logger.error("Unable to start or connect to KVServer.");
                 e.printStackTrace();
             }
+        }
 
-            try {
-                awaitNodes(1, ZK_TIMEOUT);
-            } catch (Exception e) {
-                logger.error("awaitNodes failed");
-            }
+        try {
+            awaitNodes(count, ZK_TIMEOUT);
+        } catch (Exception e) {
+            logger.error("awaitNodes failed");
         }
 
         setupNodes(count, cacheStrategyEnum, cacheSize, serverInfoAdded);
@@ -515,7 +514,116 @@ public class ECSClient implements IECSClient {
             e.printStackTrace();
         }
 
+        // Clean up ZooKeeper files
+        // Get directory
+        Properties prop = new Properties();
+        try (FileInputStream fis = new FileInputStream(ZK_CONF_PATH)) {
+            prop.load(fis);
+        } catch (Exception e) {
+            logger.error("Unable to clean up ZooKeeper files");
+            e.printStackTrace();
+        }
+
+        // Delete contents
+        String zkPath = prop.getProperty("dataDir");
+        File zkDir = new File(zkPath);
+        deleteDirectory(zkDir);
+
+        // Manually kill all "java" processes
+        // Get username
+        String homeDir = System.getProperty("user.home");
+        String[] homeDirArray = homeDir.split("/");
+        String username = homeDirArray[homeDirArray.length - 1];
+        // Get all user-specific processes
+        String cmd = String.format("ps -u %s", username);
+        List<Integer> javaPrograms = null;
+
+        try {
+            Process p = Runtime.getRuntime().exec(cmd);
+            BufferedReader stdIn = new BufferedReader(new InputStreamReader(p.getInputStream()));
+            javaPrograms = parseProcessList(stdIn);
+        } catch (Exception e) {
+            logger.error(String.format("Unable to execute or read output of %s", cmd));
+            e.printStackTrace();
+        }
+
+        // Construct kill command
+        StringBuilder killCmd = new StringBuilder();
+        killCmd.append("kill ");
+        for (Integer pid : javaPrograms) {
+            killCmd.append(pid);
+            killCmd.append(" ");
+        }
+
+        killCmd.append("&");
+
+        // Execute
+        try {
+            logger.info("Cleaning up all Java programs");
+            logger.info(killCmd.toString());
+            Process p = Runtime.getRuntime().exec(killCmd.toString());
+        } catch (Exception e) {
+            logger.error("Unable to clean up Java programs");
+            e.printStackTrace();
+        }
+
         DebugHelper.logFuncExit(logger);
+    }
+
+    /**
+     * Recursively delete all contents of a directory.
+     * 
+     * @param f
+     */
+    private void deleteDirectory(File f) {
+        for (File subfile : f.listFiles()) {
+            if (subfile.isDirectory()) {
+                deleteDirectory(subfile);
+            }
+
+            subfile.delete();
+        }
+    }
+
+    /**
+     * Parse list of processes a user is currently running and get the PIDs of all
+     * Java programs.
+     * 
+     * @param stdIn
+     * @return
+     */
+    private List<Integer> parseProcessList(BufferedReader stdIn) {
+        List<Integer> javaPrograms = new ArrayList<Integer>();
+        String line;
+
+        try {
+            while ((line = stdIn.readLine()) != null) {
+                String[] psArray = line.split("\\s+");
+
+                int pid = -1;
+                String cmd;
+                try {
+                    if (psArray.length == 5) {
+                        pid = Integer.parseInt(psArray[1]);
+                        cmd = psArray[4];
+                    } else {
+                        pid = Integer.parseInt(psArray[0]);
+                        cmd = psArray[3];
+                    }
+                } catch (Exception e) {
+                    continue;
+                }
+
+                if (cmd.equals("java")) {
+                    javaPrograms.add(pid);
+                }
+            }
+        } catch (Exception e) {
+            logger.error("Unable to parse list of processes");
+            e.printStackTrace();
+        }
+
+        return javaPrograms;
     }
 
     @Override
@@ -551,6 +659,7 @@ public class ECSClient implements IECSClient {
             }
         }
 
+        Collections.sort(availableServers);
         DebugHelper.logFuncExit(logger);
 
         return availableServers;
@@ -772,7 +881,7 @@ public class ECSClient implements IECSClient {
         sb.append("::::::::::::::::::::::::::::::::");
         sb.append("::::::::::::::::::::::::::::::::\n");
         sb.append(PROMPT).append("addnodes <num> <cacheStrategy> <cacheSize>");
-        sb.append("\t Randomly choose <num> nodes from available machines and start them \n");
+        sb.append("\t Choose <num> nodes from available machines and start them \n");
 
         sb.append(PROMPT).append("addnode <cacheStrategy> <cacheSize>");
         sb.append("\t Create new KVServer and add it to the storage service at an arbitrary position \n");

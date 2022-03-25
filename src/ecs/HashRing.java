@@ -42,7 +42,7 @@ public class HashRing {
         for (int i = 0; i < hashRingSize; i++) {
             String info = serverInfo.get(i);
             ECSNode node = createECSNode(info, cacheStrategy, cacheSize);
-            logger.debug(String.format("Adding to hash ring: %d", node.getNodeID()));
+            logger.debug(String.format("Adding to hash ring: %x", node.getNodeID()));
             hashRing.put(node.getNodeID(), node);
             nodesAdded.add(node);
         }
@@ -64,7 +64,7 @@ public class HashRing {
         logger.debug(String.format("currNodeIdx: %d", currNodeIdx));
         logger.debug(String.format("hashRingSize: %d", hashRingSize));
         BigInteger currNodeID = nodeIDsList.get(currNodeIdx);
-        logger.debug(String.format("currNodeID: %d", currNodeID));
+        logger.debug(String.format("currNodeID: %x", currNodeID));
 
         // Calculate hash range
         int prevNodeIdx = (currNodeIdx == 0) ? hashRingSize - 1 : currNodeIdx - 1;
@@ -73,13 +73,13 @@ public class HashRing {
         BigInteger[] hashRange = { currNodeID, nextNodeID };
         logger.debug(String.format("prev/nextNodeIdx: %s, %s", prevNodeIdx, nextNodeIdx));
         logger.debug(String.format("nextNodeID: %s", nextNodeID));
-        logger.debug(String.format("hashRange: %d-%d", hashRange[0], hashRange[1]));
+        logger.debug(String.format("hashRange: %x-%x", hashRange[0], hashRange[1]));
 
         // Set ring position and hash range info
         ECSNode currNode = hashRing.get(currNodeID);
         BigInteger prevNodeID = nodeIDsList.get(prevNodeIdx);
         logger.debug(String.format("currNode: %s", currNode));
-        logger.debug(String.format("prevNodeID: %d", prevNodeID));
+        logger.debug(String.format("prevNodeID: %x", prevNodeID));
         currNode.setPrevNodeID(prevNodeID);
         currNode.setNextNodeID(nextNodeID);
         currNode.setNodeHashRange(hashRange);
@@ -94,8 +94,8 @@ public class HashRing {
         int port = Integer.parseInt(infoArray[2]);
         String infoToHash = createStringToHash(host, port);
         BigInteger nodeID = hashServerInfo(infoToHash);
-        logger.info(String.format("Hashed %s --> %d", infoToHash, nodeID));
-        logger.debug(String.format("ID: %d, name: %s, host: %s, port: %d, cache: %s, %d", nodeID, name, host, port,
+        logger.info(String.format("Hashed %s --> %x", infoToHash, nodeID));
+        logger.debug(String.format("ID: %x, name: %s, host: %s, port: %d, cache: %s, %d", nodeID, name, host, port,
                 cacheStrategy.toString(), cacheSize));
 
         ECSNode node = new ECSNode(nodeID, name, host, port, cacheStrategy, cacheSize);
@@ -126,7 +126,7 @@ public class HashRing {
                 // newNodeID > currNodeID;
                 continue;
             } else {
-                logger.error(String.format("Found two nodes with the same ID: %d, %d", newNodeID, currNodeID));
+                logger.error(String.format("Found two nodes with the same ID: %x, %x", newNodeID, currNodeID));
                 break;
             }
         }
@@ -292,17 +292,18 @@ public class HashRing {
         for (BigInteger nodeID : nodeIDsSet) {
             ECSNode node = hashRing.get(nodeID);
 
-            System.out.println(String.format("ID: %d", node.getNodeID()));
+            System.out.println(String.format("ID: %x", node.getNodeID()));
             System.out.println(String.format("Name: %s", node.getNodeName()));
             System.out.println(String.format("Host: %s", node.getNodeHost()));
             System.out.println(String.format("Port: %d", node.getNodePort()));
             BigInteger prevNodeID = node.getPrevNodeID();
             String prevNodeName = hashRing.get(prevNodeID).getNodeName();
-            System.out.println(String.format("prevNode: %s, %d", prevNodeName, prevNodeID));
+            System.out.println(String.format("prevNode: %s, %x", prevNodeName, prevNodeID));
             BigInteger nextNodeID = node.getNextNodeID();
             String nextNodeName = hashRing.get(nextNodeID).getNodeName();
-            System.out.println(String.format("nextNode: %s, %d", nextNodeName, nextNodeID));
-            System.out.println(String.format("hashRange: %s", Arrays.toString(node.getNodeHashRange())));
+            System.out.println(String.format("nextNode: %s, %x", nextNodeName, nextNodeID));
+            BigInteger[] nodeHashRange = node.getNodeHashRange();
+            System.out.println(String.format("hashRange: [%x, %x]", nodeHashRange[0], nodeHashRange[1]));
             System.out.println();
         }
 

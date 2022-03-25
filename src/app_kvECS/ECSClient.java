@@ -229,9 +229,9 @@ public class ECSClient implements IECSClient {
         }
 
         try {
-        awaitNodes(count, ZK_TIMEOUT);
+            awaitNodes(count, ZK_TIMEOUT);
         } catch (Exception e) {
-        logger.error("awaitNodes failed");
+            logger.error("awaitNodes failed");
         }
 
         setupNodes(count, cacheStrategyEnum, cacheSize, serverInfoAdded);

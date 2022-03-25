@@ -58,7 +58,7 @@ public class ECSClient implements IECSClient {
     public static final String ZK_ROOT_PATH = "/zkRoot";
     private static final String ZK_CONF_PATH = "zoo.cfg";
     private static final String SERVER_DIR = "~/ece419-project";
-    private static final String SERVER_JAR = "m2-server.jar";
+    private static final String SERVER_JAR = "m3-server.jar";
     private static final int ZK_PORT = 2181;
     private static final String ZK_HOST = "localhost";
     private static final int ZK_TIMEOUT = 2000;
@@ -515,7 +515,87 @@ public class ECSClient implements IECSClient {
             e.printStackTrace();
         }
 
+        // Manually kill all "java" processes
+        // Get username
+        String homeDir = System.getProperty("user.home");
+        String[] homeDirArray = homeDir.split("/");
+        String username = homeDirArray[homeDirArray.length - 1];
+        // Get all user-specific processes
+        String cmd = String.format("ps -u %s", username);
+        List<Integer> javaPrograms = null;
+
+        try {
+            System.out.println("Executing: " + cmd);
+            Process p = Runtime.getRuntime().exec(cmd);
+            BufferedReader stdIn = new BufferedReader(new InputStreamReader(p.getInputStream()));
+            javaPrograms = parseProcessList(stdIn);
+        } catch (Exception e) {
+            logger.error(String.format("Unable to execute or read output of %s", cmd));
+            e.printStackTrace();
+        }
+
+        // Construct kill command
+        StringBuilder killCmd = new StringBuilder();
+        killCmd.append("kill ");
+        for (Integer pid : javaPrograms) {
+            killCmd.append(pid);
+            killCmd.append(" ");
+        }
+
+        killCmd.append("&");
+
+        // Execute
+        try {
+            logger.info("Cleaning up all Java programs");
+            logger.info(killCmd.toString());
+            Process p = Runtime.getRuntime().exec(killCmd.toString());
+        } catch (Exception e) {
+            logger.error("Unable to clean up Java programs");
+            e.printStackTrace();
+        }
+
         DebugHelper.logFuncExit(logger);
+    }
+
+    /**
+     * Parse list of processes a user is currently running and get the PIDs of all
+     * Java programs.
+     * 
+     * @param stdIn
+     * @return
+     */
+    private List<Integer> parseProcessList(BufferedReader stdIn) {
+        List<Integer> javaPrograms = new ArrayList<Integer>();
+        String line;
+
+        try {
+            while ((line = stdIn.readLine()) != null) {
+                String[] psArray = line.split("\\s+");
+
+                int pid = -1;
+                String cmd;
+                try {
+                    if (psArray.length == 5) {
+                        pid = Integer.parseInt(psArray[1]);
+                        cmd = psArray[4];
+                    } else {
+                        pid = Integer.parseInt(psArray[0]);
+                        cmd = psArray[3];
+                    }
+                } catch (Exception e) {
+                    continue;
+                }
+
+                if (cmd.equals("java")) {
+                    javaPrograms.add(pid);
+                }
+            }
+        } catch (Exception e) {
+            logger.error("Unable to parse list of processes");
+            e.printStackTrace();
+        }
+
+        return javaPrograms;
     }
 
     @Override

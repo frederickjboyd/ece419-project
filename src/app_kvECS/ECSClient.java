@@ -47,7 +47,7 @@ import shared.Metadata;
 public class ECSClient implements IECSClient {
     // Prevent external libraries from spamming console
     public static Logger logger = Logger.getLogger(ECSClient.class);
-    private static Level logLevel = Level.ERROR;
+    private static Level logLevel = Level.DEBUG;
 
     private boolean running = false;
     private boolean zkServerRunning = false;
@@ -65,7 +65,7 @@ public class ECSClient implements IECSClient {
     private static final String ZK_HOST = "localhost";
     private static final int ZK_TIMEOUT = 2000;
     private Thread zkServer;
-    private ZooKeeperWatcher zkWatcher;
+    private ZooKeeperConnectedWatcher zkWatcher;
     private ZooKeeper zk;
 
     public ECSClient(String configPath) {
@@ -94,7 +94,7 @@ public class ECSClient implements IECSClient {
 
             // Initialize ZooKeeper client
             CountDownLatch latch = new CountDownLatch(1);
-            zkWatcher = new ZooKeeperWatcher(latch);
+            zkWatcher = new ZooKeeperConnectedWatcher(latch);
             String connectString = String.format("%s:%s", ZK_HOST, ZK_PORT);
             zk = new ZooKeeper(connectString, ZK_TIMEOUT, zkWatcher);
             latch.await(); // Wait for client to initialize
@@ -139,10 +139,10 @@ public class ECSClient implements IECSClient {
     /**
      * Class that signals when ZooKeeper client has successfully started.
      */
-    private class ZooKeeperWatcher implements Watcher {
+    private class ZooKeeperConnectedWatcher implements Watcher {
         private CountDownLatch latch;
 
-        public ZooKeeperWatcher(CountDownLatch clientLatch) {
+        public ZooKeeperConnectedWatcher(CountDownLatch clientLatch) {
             this.latch = clientLatch;
         }
 
@@ -235,6 +235,12 @@ public class ECSClient implements IECSClient {
         }
 
         setupNodes(count, cacheStrategyEnum, cacheSize, serverInfoAdded);
+
+        // Set up ZooKeeper watcher to detect when a node goes offline
+        for (String serverInfo : serverInfoAdded) {
+            handleNodeCrash(serverInfo);
+        }
+
         DebugHelper.logFuncExit(logger);
 
         return nodesAdded;
@@ -298,6 +304,66 @@ public class ECSClient implements IECSClient {
 
         DebugHelper.logFuncExit(logger);
         return result;
+    }
+
+    private void handleNodeCrash(String serverInfo) {
+        DebugHelper.logFuncEnter(logger);
+        String zkNodePath = buildZkNodePath(serverInfo);
+
+        try {
+            zk.exists(zkNodePath, new ZooKeeperNodeDeletedWatcher(serverInfo));
+        } catch (Exception e) {
+            logger.error("Unable to configure node crash detection");
+            e.printStackTrace();
+        }
+
+        DebugHelper.logFuncExit(logger);
+    }
+
+    /**
+     * Class that signals when a node has failed.
+     */
+    private class ZooKeeperNodeDeletedWatcher implements Watcher {
+        String serverInfo;
+
+        public ZooKeeperNodeDeletedWatcher(String serverInfo) {
+            this.serverInfo = serverInfo;
+            logger.debug(String.format("Creating new watcher for %s", serverInfo));
+        }
+
+        public void process(WatchedEvent event) {
+            try {
+                if (event.getType() == EventType.NodeDeleted
+                        && serverStatusInfo.get(serverInfo) != NodeStatus.OFFLINE) {
+                    System.out.println();
+                    logger.error(String.format("Server %s failed!", serverInfo));
+                    // Remove failed node
+                    ECSNode failedNode = hashRing.getNodeByServerInfo(serverInfo);
+                    CacheStrategy oldCacheStrategy = failedNode.getCacheStrategy();
+                    int oldCacheSize = failedNode.getCacheSize();
+                    unavailableServers.remove(serverInfo);
+                    NodeStatus oldStatus = serverStatusInfo.get(serverInfo);
+                    List<String> failedNodeList = new ArrayList<String>();
+                    logger.debug(String.format("Old cache: %s, %d", oldCacheStrategy.toString(), oldCacheSize));
+                    logger.debug(String.format("Old status: %s", oldStatus.toString()));
+                    failedNodeList.add(serverInfo);
+                    removeNodes(failedNodeList, true);
+                    // Start up replacement
+                    addNode(oldCacheStrategy.toString(), oldCacheSize);
+
+                    if (oldStatus == NodeStatus.ONLINE) {
+                        start();
+                    }
+                } else {
+                    handleNodeCrash(serverInfo);
+                }
+
+                System.out.print(PROMPT);
+            } catch (Exception e) {
+                logger.error("Unable to handle ZooKeeper event");
+                e.printStackTrace();
+            }
+        }
     }
 
     @Override
@@ -388,31 +454,30 @@ public class ECSClient implements IECSClient {
     }
 
     @Override
-    public boolean removeNodes(List<String> nodeNames) {
+    public boolean removeNodes(List<String> nodeNames, boolean isFailure) {
         DebugHelper.logFuncEnter(logger);
         logger.info(String.format("Removing nodes: %s", nodeNames));
+        logger.info(String.format("isFailure: %s", isFailure));
 
         for (String serverInfo : nodeNames) {
             try {
-                serverStatusInfo.put(serverInfo, NodeStatus.OFFLINE);
+                NodeStatus newStatus = isFailure ? NodeStatus.FAILED : NodeStatus.OFFLINE;
+                serverStatusInfo.put(serverInfo, newStatus);
                 // Metadata still with node that is to be removed
                 HashMap<String, Metadata> allMetadataOld = hashRing.removeNode(serverInfo);
 
-                // Sent updated hash range to server
-                AdminMessage msg = new AdminMessage(MessageType.UPDATE, allMetadataOld);
-                String zkNodePath = buildZkNodePath(serverInfo);
+                // Can't send message to failed node
+                if (!isFailure) {
+                    // Sent updated hash range to server
+                    AdminMessage msg = new AdminMessage(MessageType.UPDATE, allMetadataOld);
+                    String zkNodePath = buildZkNodePath(serverInfo);
 
-                if (zk.exists(zkNodePath, false) != null) {
-                    zk.setData(zkNodePath, msg.toBytes(), zk.exists(zkNodePath, false).getVersion());
+                    if (zk.exists(zkNodePath, false) != null) {
+                        zk.setData(zkNodePath, msg.toBytes(), zk.exists(zkNodePath, false).getVersion());
+                    }
                 }
 
                 unavailableServers.remove(serverInfo);
-                // msg = new AdminMessage(MessageType.SHUTDOWN);
-
-                // if (zk.exists(zkNodePath, false) != null) {
-                // zk.setData(zkNodePath, msg.toBytes(), zk.exists(zkNodePath,
-                // false).getVersion());
-                // }
             } catch (Exception e) {
                 logger.error(String.format("Unable to remove server: %s", serverInfo));
                 e.printStackTrace();
@@ -781,7 +846,7 @@ public class ECSClient implements IECSClient {
                     serversToRemove.add(tokens[i]);
                 }
 
-                removeNodes(serversToRemove);
+                removeNodes(serversToRemove, false);
                 break;
 
             case "cleanlogs":

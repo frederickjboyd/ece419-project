@@ -101,9 +101,20 @@ public class ECSClient implements IECSClient {
             zk = new ZooKeeper(connectString, ZK_TIMEOUT, zkWatcher);
             latch.await(); // Wait for client to initialize
 
-            // Create storage server root
+            // Create storage servers
             if (zk.exists(ZK_ROOT_PATH, false) == null) {
                 zk.create(ZK_ROOT_PATH, new byte[0], ZooDefs.Ids.OPEN_ACL_UNSAFE, CreateMode.PERSISTENT);
+                logger.info(String.format("Created ZooKeeper root: %s", ZK_ROOT_PATH));
+            }
+
+            if (zk.exists(ZK_ROOT_PATH_PREV, false) == null) {
+                zk.create(ZK_ROOT_PATH_PREV, new byte[0], ZooDefs.Ids.OPEN_ACL_UNSAFE, CreateMode.PERSISTENT);
+                logger.info(String.format("Created ZooKeeper root: %s", ZK_ROOT_PATH_PREV));
+            }
+
+            if (zk.exists(ZK_ROOT_PATH_NEXT, false) == null) {
+                zk.create(ZK_ROOT_PATH_NEXT, new byte[0], ZooDefs.Ids.OPEN_ACL_UNSAFE, CreateMode.PERSISTENT);
+                logger.info(String.format("Created ZooKeeper root: %s", ZK_ROOT_PATH_NEXT));
             }
         } catch (Exception e) {
             logger.error("Unable to initialize ECSClient.");
@@ -313,7 +324,9 @@ public class ECSClient implements IECSClient {
         String zkNodePath = buildZkNodePath(serverInfo);
 
         try {
-            zk.exists(zkNodePath, new ZooKeeperNodeDeletedWatcher(serverInfo));
+            if (running) {
+                zk.exists(zkNodePath, new ZooKeeperNodeDeletedWatcher(serverInfo));
+            }
         } catch (Exception e) {
             logger.error("Unable to configure node crash detection");
             e.printStackTrace();
@@ -328,6 +341,11 @@ public class ECSClient implements IECSClient {
     private class ZooKeeperNodeDeletedWatcher implements Watcher {
         String serverInfo;
 
+        /**
+         * Constructor.
+         * 
+         * @param serverInfo serverName:ip:port
+         */
         public ZooKeeperNodeDeletedWatcher(String serverInfo) {
             this.serverInfo = serverInfo;
             logger.debug(String.format("Creating new watcher for %s", serverInfo));
@@ -570,11 +588,11 @@ public class ECSClient implements IECSClient {
         DebugHelper.logFuncEnter(logger);
 
         try {
+            running = false;
+            zkServerRunning = false;
             stop();
             shutdown();
             zk.close();
-            running = false;
-            zkServerRunning = false;
             zkServer.stop();
         } catch (Exception e) {
             logger.error("Unable to quit ECSClient");

@@ -25,7 +25,8 @@ public class ECSNode {
     public enum NodeStatus {
         OFFLINE, // Node in ECS config, but not added
         IDLE, // Node added, but not started
-        ONLINE // Node added and started
+        ONLINE, // Node added and started
+        FAILED // Node crashed - should not be used for remainder of session
     }
 
     public ECSNode(BigInteger ID, String name, String host, int port, CacheStrategy cacheStrategy, int cacheSize) {
@@ -47,7 +48,7 @@ public class ECSNode {
     }
 
     /**
-     * @return the name of the node (ie "Server 8.8.8.8")
+     * @return Name of the node (e.g. server1)
      */
     public String getNodeName() {
         return this.name;
@@ -58,14 +59,14 @@ public class ECSNode {
     }
 
     /**
-     * @return the hostname of the node (ie "8.8.8.8")
+     * @return Hostname of the node (e.g. 127.0.0.1)
      */
     public String getNodeHost() {
         return this.host;
     }
 
     /**
-     * @return the port number of the node (ie 8080)
+     * @return Port number of the node (e.g. 8080)
      */
     public int getNodePort() {
         return this.port;
@@ -96,7 +97,7 @@ public class ECSNode {
     }
 
     /**
-     * @return array of two strings representing the low and high range of the
+     * @return Array of two numbers representing the low and high range of the
      *         hashes that the given node is responsible for
      */
     public BigInteger[] getNodeHashRange() {

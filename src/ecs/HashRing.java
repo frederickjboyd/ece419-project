@@ -59,6 +59,19 @@ public class HashRing {
         return nodesAdded;
     }
 
+    /**
+     * Given where a new node is to be inserted into the hash ring, calculate and
+     * set the hash ranges of the node being added. Also update the hash range of
+     * the next node.
+     * 
+     * @param currNodeIdx  Index of where the new node is to be added to the hash
+     *                     ring
+     * @param nodeIDsList  Sorted list of node IDs that were already in the hash
+     *                     ring (note that this does not include the node being
+     *                     added)
+     * @param hashRingSize Size of the hash ring if the new node were to be
+     *                     successfully added
+     */
     private void setNodeHashRange(int currNodeIdx, List<BigInteger> nodeIDsList, int hashRingSize) {
         DebugHelper.logFuncEnter(logger);
         logger.debug(String.format("currNodeIdx: %d", currNodeIdx));
@@ -70,9 +83,21 @@ public class HashRing {
         int prevNodeIdx = (currNodeIdx == 0) ? hashRingSize - 1 : currNodeIdx - 1;
         int nextNodeIdx = (currNodeIdx + 1) % hashRingSize;
         BigInteger nextNodeID = nodeIDsList.get(nextNodeIdx);
-        BigInteger[] hashRange = { currNodeID, nextNodeID };
         logger.debug(String.format("prev/nextNodeIdx: %s, %s", prevNodeIdx, nextNodeIdx));
-        logger.debug(String.format("nextNodeID: %s", nextNodeID));
+        logger.debug(String.format("nextNodeID: %x", nextNodeID));
+        ECSNode nextNode = hashRing.get(nextNodeID);
+        BigInteger[] hashRange = new BigInteger[2];
+        hashRange[0] = currNodeID;
+
+        if (hashRingSize == 1) {
+            // Single node must handle entire hash range
+            hashRange[1] = nextNodeID;
+        } else {
+            // Only check next node's hash range if another node exists
+            BigInteger nextNodeHashRangeBegin = nextNode.getNodeHashRange()[0];
+            hashRange[1] = nextNodeHashRangeBegin;
+        }
+
         logger.debug(String.format("hashRange: %x-%x", hashRange[0], hashRange[1]));
 
         // Set ring position and hash range info
@@ -86,6 +111,14 @@ public class HashRing {
         DebugHelper.logFuncExit(logger);
     }
 
+    /**
+     * Create an `ECSNode` instance.
+     * 
+     * @param info          Server info in an ip:port format
+     * @param cacheStrategy Type of caching to use
+     * @param cacheSize     Size of cache to use
+     * @return
+     */
     public ECSNode createECSNode(String info, CacheStrategy cacheStrategy, int cacheSize) {
         DebugHelper.logFuncEnter(logger);
         String[] infoArray = info.split(":");
@@ -104,6 +137,12 @@ public class HashRing {
         return node;
     }
 
+    /**
+     * Add a new node to the hash ring. Update hash ranges of other nodes if
+     * necessary.
+     * 
+     * @param node
+     */
     public void addNode(ECSNode node) {
         DebugHelper.logFuncEnter(logger);
         BigInteger newNodeID = node.getNodeID();
@@ -156,6 +195,11 @@ public class HashRing {
         DebugHelper.logFuncExit(logger);
     }
 
+    /**
+     * Add multiple nodes to the hash ring.
+     * 
+     * @param nodeArray
+     */
     public void addNodes(ECSNode[] nodeArray) {
         DebugHelper.logFuncEnter(logger);
 
@@ -166,21 +210,29 @@ public class HashRing {
         DebugHelper.logFuncExit(logger);
     }
 
+    /**
+     * Parse server info as a string so that the real `removeNode` can be called.
+     * 
+     * @param serverInfo
+     * @return
+     */
     public HashMap<String, Metadata> removeNode(String serverInfo) {
         DebugHelper.logFuncEnter(logger);
-        String[] serverInfoArray = serverInfo.split(":");
-        String host = serverInfoArray[1];
-        int port = Integer.parseInt(serverInfoArray[2]);
-
-        String infoToHash = createStringToHash(host, port);
-        BigInteger nodeID = hashServerInfo(infoToHash);
-        ECSNode node = hashRing.get(nodeID);
+        ECSNode node = getNodeByServerInfo(serverInfo);
         HashMap<String, Metadata> allMetadataOld = removeNode(node);
         DebugHelper.logFuncExit(logger);
 
         return allMetadataOld;
     }
 
+    /**
+     * Remove a node from the hash ring. Update hash range of next node.
+     * 
+     * @param node
+     * @return Metadata that includes the node that was just removed. Removed node
+     *         has a hash range of [0, 0] that lets the applicable server know that
+     *         it should transfer all its key-value pairs.
+     */
     public HashMap<String, Metadata> removeNode(ECSNode node) {
         DebugHelper.logFuncEnter(logger);
         ECSNode prevNode = hashRing.get(node.getPrevNodeID());
@@ -191,9 +243,9 @@ public class HashRing {
                 nextNode.getNodePort()));
         // Next server is now responsible for current node's hash range
         BigInteger[] nextNodeHashRange = nextNode.getNodeHashRange();
-        logger.debug(String.format("nextNode old hash range: %s", Arrays.toString(nextNodeHashRange)));
+        logger.debug(String.format("nextNode old hash range: [%x, %x]", nextNodeHashRange[0], nextNodeHashRange[1]));
         nextNodeHashRange[0] = node.getNodeHashRange()[0];
-        logger.debug(String.format("nextNode new hash range: %s", Arrays.toString(nextNodeHashRange)));
+        logger.debug(String.format("nextNode new hash range: [%x, %x]", nextNodeHashRange[0], nextNodeHashRange[1]));
 
         prevNode.setNextNodeID(nextNodeID);
         nextNode.setPrevNodeID(prevNodeID);
@@ -209,6 +261,12 @@ public class HashRing {
         return allMetadataOld;
     }
 
+    /**
+     * Calculate MD5 hash of server info.
+     * 
+     * @param info Server info in ip:port format
+     * @return
+     */
     public BigInteger hashServerInfo(String info) {
         DebugHelper.logFuncEnter(logger);
         BigInteger hashBigInt = null;
@@ -227,6 +285,13 @@ public class HashRing {
         return hashBigInt;
     }
 
+    /**
+     * Create string to be hashed.
+     * 
+     * @param host
+     * @param port
+     * @return
+     */
     public String createStringToHash(String host, int port) {
         return host + ":" + port;
     }
@@ -246,6 +311,11 @@ public class HashRing {
         return nodeIDsList;
     }
 
+    /**
+     * Return current metadata from nodes in the hash ring.
+     * 
+     * @return
+     */
     public HashMap<String, Metadata> getAllMetadata() {
         DebugHelper.logFuncEnter(logger);
         HashMap<String, Metadata> allMetadata = new HashMap<String, Metadata>();
@@ -279,6 +349,24 @@ public class HashRing {
 
     public HashMap<BigInteger, ECSNode> getHashRing() {
         return this.hashRing;
+    }
+
+    /**
+     * Get the ECSNode corresponding to a server's info.
+     * 
+     * @param serverInfo serverName:ip:port
+     * @return
+     */
+    public ECSNode getNodeByServerInfo(String serverInfo) {
+        DebugHelper.logFuncEnter(logger);
+        String[] infoArray = serverInfo.split(":");
+        String host = infoArray[1];
+        int port = Integer.valueOf(infoArray[2]);
+        String infoToHash = createStringToHash(host, port);
+        BigInteger nodeID = hashServerInfo(infoToHash);
+        DebugHelper.logFuncExit(logger);
+
+        return hashRing.get(nodeID);
     }
 
     public void printHashRingStatus() {

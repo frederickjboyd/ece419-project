@@ -58,6 +58,8 @@ public class ECSClient implements IECSClient {
     private HashMap<String, Process> runningServers = new HashMap<String, Process>();
 
     public static final String ZK_ROOT_PATH = "/zkRoot";
+    public static final String ZK_ROOT_PATH_PREV = "/zkRootPrev";
+    public static final String ZK_ROOT_PATH_NEXT = "/zkRootNext";
     private static final String ZK_CONF_PATH = "zoo.cfg";
     private static final String SERVER_DIR = "~/ece419-project";
     private static final String SERVER_JAR = "m3-server.jar";

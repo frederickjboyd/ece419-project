@@ -59,8 +59,6 @@ public class ECSClient implements IECSClient {
     private HashMap<String, Process> runningServers = new HashMap<String, Process>();
 
     public static final String ZK_ROOT_PATH = "/zkRoot";
-    public static final String ZK_ROOT_PATH_PREV = "/zkRootPrev";
-    public static final String ZK_ROOT_PATH_NEXT = "/zkRootNext";
     private static final String ZK_CONF_PATH = "zoo.cfg";
     private static final String SERVER_DIR = "~/ece419-project";
     private static final String SERVER_JAR = "m3-server.jar";
@@ -88,7 +86,7 @@ public class ECSClient implements IECSClient {
 
             while ((l = reader.readLine()) != null) {
                 String[] config = l.split("\\s+", 3);
-                logger.info(String.format("%s => %s:%s", config[0], config[1], config[2]));
+                logger.trace(String.format("%s => %s:%s", config[0], config[1], config[2]));
                 serverStatusInfo.put(String.format("%s:%s:%s", config[0], config[1], config[2]),
                         NodeStatus.OFFLINE);
             }
@@ -107,20 +105,10 @@ public class ECSClient implements IECSClient {
             zk = new ZooKeeper(connectString, ZK_TIMEOUT, zkWatcher);
             latch.await(); // Wait for client to initialize
 
-            // Create storage servers
+            // Create root storage server
             if (zk.exists(ZK_ROOT_PATH, false) == null) {
                 zk.create(ZK_ROOT_PATH, new byte[0], ZooDefs.Ids.OPEN_ACL_UNSAFE, CreateMode.PERSISTENT);
                 logger.info(String.format("Created ZooKeeper root: %s", ZK_ROOT_PATH));
-            }
-
-            if (zk.exists(ZK_ROOT_PATH_PREV, false) == null) {
-                zk.create(ZK_ROOT_PATH_PREV, new byte[0], ZooDefs.Ids.OPEN_ACL_UNSAFE, CreateMode.PERSISTENT);
-                logger.info(String.format("Created ZooKeeper root: %s", ZK_ROOT_PATH_PREV));
-            }
-
-            if (zk.exists(ZK_ROOT_PATH_NEXT, false) == null) {
-                zk.create(ZK_ROOT_PATH_NEXT, new byte[0], ZooDefs.Ids.OPEN_ACL_UNSAFE, CreateMode.PERSISTENT);
-                logger.info(String.format("Created ZooKeeper root: %s", ZK_ROOT_PATH_NEXT));
             }
         } catch (Exception e) {
             logger.error("Unable to initialize ECSClient.");
@@ -245,6 +233,8 @@ public class ECSClient implements IECSClient {
                 logger.error("Unable to start or connect to KVServer.");
                 e.printStackTrace();
             }
+
+            awaitTime(25);
         }
 
         try {
@@ -323,6 +313,19 @@ public class ECSClient implements IECSClient {
 
         DebugHelper.logFuncExit(logger);
         return result;
+    }
+
+    private void awaitTime(int timeout) {
+        DebugHelper.logFuncEnter(logger);
+        CountDownLatch latch = new CountDownLatch(timeout);
+
+        try {
+            latch.await(timeout, TimeUnit.MILLISECONDS);
+        } catch (Exception e) {
+            logger.error("Error during await");
+        }
+
+        DebugHelper.logFuncExit(logger);
     }
 
     private void handleNodeCrash(String serverInfo) {
@@ -638,7 +641,7 @@ public class ECSClient implements IECSClient {
 
         // Execute
         try {
-            logger.info("Cleaning up all Java programs");
+            logger.info("Cleaning up Java programs");
             logger.info(killCmd.toString());
             Process p = Runtime.getRuntime().exec(killCmd.toString());
         } catch (Exception e) {
@@ -661,6 +664,30 @@ public class ECSClient implements IECSClient {
             }
 
             subfile.delete();
+        }
+    }
+
+    /**
+     * Helper function to kill all Java processes, regardless of when they were
+     * created.
+     */
+    private void killAllJavaPIDs() {
+        List<Integer> javaPIDs = getJavaPIDs();
+        StringBuilder killCmd = new StringBuilder();
+        killCmd.append("kill ");
+
+        for (Integer pid : javaPIDs) {
+            killCmd.append(pid);
+            killCmd.append(" ");
+        }
+
+        try {
+            logger.info("Cleaning up all Java programs");
+            logger.info(killCmd.toString());
+            Process p = Runtime.getRuntime().exec(killCmd.toString());
+        } catch (Exception e) {
+            logger.error("Unable to clean up Java programs");
+            e.printStackTrace();
         }
     }
 
@@ -907,6 +934,11 @@ public class ECSClient implements IECSClient {
                 cleanData();
                 break;
 
+            case "killjava":
+                logger.info("Handling killjava");
+                killAllJavaPIDs();
+                break;
+
             case "status":
                 logger.info("Handling status...");
                 hashRing.printHashRingStatus();
@@ -1018,6 +1050,9 @@ public class ECSClient implements IECSClient {
 
         sb.append(PROMPT).append("cleanall");
         sb.append("\t\t\t\t\t Run all clean* commands \n");
+
+        sb.append(PROMPT).append("killjava");
+        sb.append("\t\t\t\t\t Kill all Java processes \n");
 
         sb.append(PROMPT).append("logLevel");
         sb.append("\t\t\t\t\t changes the logLevel \n");

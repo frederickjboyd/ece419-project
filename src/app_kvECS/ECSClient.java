@@ -48,6 +48,7 @@ public class ECSClient implements IECSClient {
     // Prevent external libraries from spamming console
     public static Logger logger = Logger.getLogger(ECSClient.class);
     private static Level logLevel = Level.DEBUG;
+    private List<Integer> initialJavaPIDs;
 
     private boolean running = false;
     private boolean zkServerRunning = false;
@@ -72,9 +73,14 @@ public class ECSClient implements IECSClient {
 
     public ECSClient(String configPath) {
         DebugHelper.logFuncEnter(logger);
+        logger.setLevel(logLevel);
+
+        // Track current running Java PIDs
+        // Only want to kill new Java processes that have been created after ECSClient
+        // launch (i.e. servers)
+        initialJavaPIDs = getJavaPIDs();
 
         try {
-            logger.setLevel(logLevel);
             // Read configuration file
             BufferedReader reader = new BufferedReader(new FileReader(configPath));
             String l;
@@ -614,30 +620,18 @@ public class ECSClient implements IECSClient {
         File zkDir = new File(zkPath);
         deleteDirectory(zkDir);
 
-        // Manually kill all "java" processes
-        // Get username
-        String homeDir = System.getProperty("user.home");
-        String[] homeDirArray = homeDir.split("/");
-        String username = homeDirArray[homeDirArray.length - 1];
-        // Get all user-specific processes
-        String cmd = String.format("ps -u %s", username);
-        List<Integer> javaPrograms = null;
-
-        try {
-            Process p = Runtime.getRuntime().exec(cmd);
-            BufferedReader stdIn = new BufferedReader(new InputStreamReader(p.getInputStream()));
-            javaPrograms = parseProcessList(stdIn);
-        } catch (Exception e) {
-            logger.error(String.format("Unable to execute or read output of %s", cmd));
-            e.printStackTrace();
-        }
+        // Manually kill all new "java" processes
+        List<Integer> javaPIDs = getJavaPIDs();
 
         // Construct kill command
         StringBuilder killCmd = new StringBuilder();
         killCmd.append("kill ");
-        for (Integer pid : javaPrograms) {
-            killCmd.append(pid);
-            killCmd.append(" ");
+
+        for (Integer pid : javaPIDs) {
+            if (!initialJavaPIDs.contains(pid)) {
+                killCmd.append(pid);
+                killCmd.append(" ");
+            }
         }
 
         killCmd.append("&");
@@ -668,6 +662,34 @@ public class ECSClient implements IECSClient {
 
             subfile.delete();
         }
+    }
+
+    /**
+     * Get list of current Java PIDs a user is running.
+     * 
+     * @return
+     */
+    public List<Integer> getJavaPIDs() {
+        // Get username
+        String homeDir = System.getProperty("user.home");
+        String[] homeDirArray = homeDir.split("/");
+        String username = homeDirArray[homeDirArray.length - 1];
+        // Get all user-specific processes
+        String cmd = String.format("ps -u %s", username);
+        List<Integer> javaPrograms = null;
+
+        try {
+            Process p = Runtime.getRuntime().exec(cmd);
+            BufferedReader stdIn = new BufferedReader(new InputStreamReader(p.getInputStream()));
+            javaPrograms = parseProcessList(stdIn);
+        } catch (Exception e) {
+            logger.error(String.format("Unable to execute or read output of %s", cmd));
+            e.printStackTrace();
+        }
+
+        logger.debug(String.format("Current running Java processes: %s", javaPrograms));
+
+        return javaPrograms;
     }
 
     /**

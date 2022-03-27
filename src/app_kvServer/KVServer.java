@@ -92,8 +92,10 @@ public class KVServer implements IKVServer, Runnable {
     // For replication
 
     // TODO - replace paths with ECSClient paths
-    private String zooPathRootPrev = ECSClient.ZK_ROOT_PATH_PREV;
-    private String zooPathRootNext = ECSClient.ZK_ROOT_PATH_NEXT;
+    // private String zooPathRootPrev = ECSClient.ZK_ROOT_PATH_PREV;
+    private String zooPathRootPrev = ECSClient.ZK_ROOT_PATH;
+    // private String zooPathRootNext = ECSClient.ZK_ROOT_PATH_NEXT;
+    private String zooPathRootNext = ECSClient.ZK_ROOT_PATH;
     private String zooPathServerPrev;
 	private String zooPathServerNext;
 
@@ -334,49 +336,49 @@ public class KVServer implements IKVServer, Runnable {
             logger.error("Failed to process ZK metadata of root node: ", e);
         }
 
-        // Next node event watcher
-        try {
-            byte[] adminMessageBytes = zoo.getData(zooPathServerNext, new Watcher() {
-                public void process(WatchedEvent we) {
-                    if (running == false) {
-                        return;
-                    } else {
-                        try {
-                            byte[] adminMessageBytes = zoo.getData(zooPathServerNext, this, null);
-                            String adminMessageString = new String(adminMessageBytes, StandardCharsets.UTF_8);
-                            logger.info("Incoming WATCHER admin message string for next server: " + adminMessageString);
-                            handleAdminMessageHelper(adminMessageString);
-                        } catch (KeeperException | InterruptedException e) {
-                            logger.error("Failed to process admin message: ", e);
-                        }
-                    }
-                }
-            }, null);
-        } catch (KeeperException | InterruptedException e) {
-            logger.error("Failed to process ZK metadata of next node : ", e);
-        }
+        // // Next node event watcher
+        // try {
+        //     byte[] adminMessageBytes = zoo.getData(zooPathServerNext, new Watcher() {
+        //         public void process(WatchedEvent we) {
+        //             if (running == false) {
+        //                 return;
+        //             } else {
+        //                 try {
+        //                     byte[] adminMessageBytes = zoo.getData(zooPathServerNext, this, null);
+        //                     String adminMessageString = new String(adminMessageBytes, StandardCharsets.UTF_8);
+        //                     logger.info("Incoming WATCHER admin message string for next server: " + adminMessageString);
+        //                     handleAdminMessageHelper(adminMessageString);
+        //                 } catch (KeeperException | InterruptedException e) {
+        //                     logger.error("Failed to process admin message: ", e);
+        //                 }
+        //             }
+        //         }
+        //     }, null);
+        // } catch (KeeperException | InterruptedException e) {
+        //     logger.error("Failed to process ZK metadata of next node : ", e);
+        // }
 
-        // Previous node event watcher
-        try {
-            byte[] adminMessageBytes = zoo.getData(zooPathServerPrev, new Watcher() {
-                public void process(WatchedEvent we) {
-                    if (running == false) {
-                        return;
-                    } else {
-                        try {
-                            byte[] adminMessageBytes = zoo.getData(zooPathServerPrev, this, null);
-                            String adminMessageString = new String(adminMessageBytes, StandardCharsets.UTF_8);
-                            logger.info("Incoming WATCHER admin message string for prev server: " + adminMessageString);
-                            handleAdminMessageHelper(adminMessageString);
-                        } catch (KeeperException | InterruptedException e) {
-                            logger.error("Failed to process admin message: ", e);
-                        }
-                    }
-                }
-            }, null);
-        } catch (KeeperException | InterruptedException e) {
-            logger.error("Failed to process ZK metadata of prev node : ", e);
-        }
+        // // Previous node event watcher
+        // try {
+        //     byte[] adminMessageBytes = zoo.getData(zooPathServerPrev, new Watcher() {
+        //         public void process(WatchedEvent we) {
+        //             if (running == false) {
+        //                 return;
+        //             } else {
+        //                 try {
+        //                     byte[] adminMessageBytes = zoo.getData(zooPathServerPrev, this, null);
+        //                     String adminMessageString = new String(adminMessageBytes, StandardCharsets.UTF_8);
+        //                     logger.info("Incoming WATCHER admin message string for prev server: " + adminMessageString);
+        //                     handleAdminMessageHelper(adminMessageString);
+        //                 } catch (KeeperException | InterruptedException e) {
+        //                     logger.error("Failed to process admin message: ", e);
+        //                 }
+        //             }
+        //         }
+        //     }, null);
+        // } catch (KeeperException | InterruptedException e) {
+        //     logger.error("Failed to process ZK metadata of prev node : ", e);
+        // }
     }
 
     /**
@@ -864,6 +866,7 @@ public class KVServer implements IKVServer, Runnable {
                 String transferServerName = zooPathRootPrev + "/" + transferServerMetadata.getHost() + ":"
                         + transferServerMetadata.getPort();
                 try {
+                    logger.info("*** Try to replicate single entry to prev! Sending a REPLICATE_DATA request to: " + transferServerName + " from " + zooPathServer);
                     // Send admin message to destination
                     // Message Type, metadata, data, to_server, from_server (allows recipient to
                     // send confirmation back later)
@@ -885,6 +888,7 @@ public class KVServer implements IKVServer, Runnable {
                 String transferServerName = zooPathRootNext + "/" + transferServerMetadata.getHost() + ":"
                         + transferServerMetadata.getPort();
                 try {
+                    logger.info("*** Try to replicate single entry to next! Sending a REPLICATE_DATA request to: " + transferServerName + " from " + zooPathServer);
                     // Send admin message to destination
                     // Message Type, metadata, data, to_server, from_server (allows recipient to
                     // send confirmation back later)
@@ -996,8 +1000,12 @@ public class KVServer implements IKVServer, Runnable {
             String toServer, String fromServer) throws KeeperException, InterruptedException {
         AdminMessage toSend = new AdminMessage(type, metadata, data, fromServer);
         logger.info("Admin Message sent with SENDING SERVER FIELD: " + toSend.getSendingServer());
-        zoo.setData(toServer, toSend.toBytes(), zoo.exists(toServer, false).getVersion());
-        logger.info("Sent KV Transfer Message to: " + toServer);
+        try{
+            zoo.setData(toServer, toSend.toBytes(), zoo.exists(toServer, false).getVersion());
+            logger.info("Sent an admin message to: " + toServer);
+        } catch (Exception e){
+            logger.error("FAILED to send admin message to: " + toServer);
+        }
     }
 
     /**

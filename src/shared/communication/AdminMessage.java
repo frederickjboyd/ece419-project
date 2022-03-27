@@ -20,7 +20,9 @@ public class AdminMessage {
         STOP, // Stop KVServer from responding to clients, but do not terminate it
         SHUTDOWN, // Terminate KVServer
         TRANSFER_DATA, // Request from a node to move its key-value pairs
-        TRANSFER_DATA_COMPLETE // All key-value pairs have been successfully received
+        TRANSFER_DATA_COMPLETE, // All key-value pairs have been successfully received
+        REPLICATE_START,
+        REPLICATE_DATA
     }
 
     private static Logger logger = Logger.getRootLogger();

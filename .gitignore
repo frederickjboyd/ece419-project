@@ -35,6 +35,6 @@ maildir*
 data
 
 # Exclude dependencies needed to build
-!libs/*.jar
+!**/libs/*.jar
 rsa_key
 rsa_key.pub

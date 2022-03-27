@@ -78,12 +78,16 @@ public interface IECSClient {
     public boolean shutdown() throws Exception;
 
     /**
-     * Removes nodes with names matching the nodeNames array
+     * Remove a node, re-calculate hash ring values, and update metadata on
+     * remaining nodes.
      * 
-     * @param nodeNames names of nodes to remove
-     * @return true on success, false otherwise
+     * @param nodeNames List of nodes to be removed with each entry in a
+     *                  serverName:ip:port format
+     * @param isFailure True if this node if being removed after failing, false
+     *                  otherwise
+     * @return True on success, false otherwise
      */
-    public boolean removeNodes(List<String> nodeNames);
+    public boolean removeNodes(List<String> nodeNames, boolean isFailure);
 
     /**
      * Get a map of all nodes

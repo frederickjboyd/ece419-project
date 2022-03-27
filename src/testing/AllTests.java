@@ -25,12 +25,12 @@ public class AllTests {
         clientSuite.addTestSuite(ConnectionTest.class);
         clientSuite.addTestSuite(InteractionTest.class);
         // clientSuite.addTestSuite(MessageTest.class);
+        // clientSuite.addTestSuite(InteractionTest.class);
         // clientSuite.addTestSuite(AdditionalTest.class);
         // clientSuite.addTestSuite(PerformanceTest.class);
-        // clientSuite.addTestSuite(HashRingTest.class);
-        clientSuite.addTestSuite(newConnectionTest.class);
+        clientSuite.addTestSuite(HashRingTest.class);
+        // clientSuite.addTestSuite(newConnectionTest.class);
 
         return clientSuite;
     }
-
 }

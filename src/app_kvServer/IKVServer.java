@@ -150,10 +150,16 @@ public interface IKVServer {
     public void processDataTransfer(String adminMessageString);
 
     /**
-     * Replicate KV Pairs on previous, next server if available
-     * @param adminMessageString
+     * Replicate a single given KV Pair on previous, next server if available
+     * @param key
+     * @param value
      */
-    public void replicate(String adminMessageString);
+    public void replicateSingleEntry(String key, String value);
+
+    /**
+     * Replicate KV Pairs on previous, next server if available
+     */
+    public void replicate();
 
     /**
      * Receive replicant KV Pairs and store into persistent storage

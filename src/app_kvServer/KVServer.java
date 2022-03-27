@@ -285,20 +285,20 @@ public class KVServer implements IKVServer, Runnable {
                 zoo.create(zooPathServer, new byte[0], ZooDefs.Ids.OPEN_ACL_UNSAFE, CreateMode.EPHEMERAL);
                 logger.info("Succesfully created Root ZNode on serverside at zooPathServer: " + zooPathServer);
             }
-            // Milestone 3
-            // Create ZNode instances for replication (prev + next servers)
-            if (zoo.exists(zooPathServerPrev, false) == null) {
-                // Path, data, access control list (perms), znode type (ephemeral = delete upon
-                // client DC)
-                zoo.create(zooPathServerPrev, new byte[0], ZooDefs.Ids.OPEN_ACL_UNSAFE, CreateMode.EPHEMERAL);
-                logger.info("Succesfully created Previous ZNode on serverside at zooPathServerPrev: " + zooPathServerPrev);
-            }
-            if (zoo.exists(zooPathServerNext, false) == null) {
-                // Path, data, access control list (perms), znode type (ephemeral = delete upon
-                // client DC)
-                zoo.create(zooPathServerNext, new byte[0], ZooDefs.Ids.OPEN_ACL_UNSAFE, CreateMode.EPHEMERAL);
-                logger.info("Succesfully created Next ZNode on serverside at zooPathServerNext: " + zooPathServerNext);
-            }
+            // // Milestone 3
+            // // Create ZNode instances for replication (prev + next servers)
+            // if (zoo.exists(zooPathServerPrev, false) == null) {
+            //     // Path, data, access control list (perms), znode type (ephemeral = delete upon
+            //     // client DC)
+            //     zoo.create(zooPathServerPrev, new byte[0], ZooDefs.Ids.OPEN_ACL_UNSAFE, CreateMode.EPHEMERAL);
+            //     logger.info("Succesfully created Previous ZNode on serverside at zooPathServerPrev: " + zooPathServerPrev);
+            // }
+            // if (zoo.exists(zooPathServerNext, false) == null) {
+            //     // Path, data, access control list (perms), znode type (ephemeral = delete upon
+            //     // client DC)
+            //     zoo.create(zooPathServerNext, new byte[0], ZooDefs.Ids.OPEN_ACL_UNSAFE, CreateMode.EPHEMERAL);
+            //     logger.info("Succesfully created Next ZNode on serverside at zooPathServerNext: " + zooPathServerNext);
+            // }
         } catch (KeeperException | InterruptedException e) {
             logger.error("Failed to create ZK ZNode: ", e);
         }
@@ -826,15 +826,88 @@ public class KVServer implements IKVServer, Runnable {
 
 
     /**
+     * Replicate a single given KV Pair on previous, next server if available
+     * 
+     * @param adminMessageString Admin message string from communications
+     */
+    @Override
+    public void replicateSingleEntry(String key, String value) {
+		Map<String, String> reachableEntries = new HashMap<>();
+		reachableEntries.put(key, value);
+
+        String reachableEntriesString = null;
+        for (Map.Entry<String, String> entry : reachableEntries.entrySet()) {
+            reachableEntriesString += (entry.getKey() + '[' + entry.getValue() + ']');
+        }
+        logger.info("Replicating single entry: " + reachableEntriesString);
+
+        // Acquire write lock - prevent further writing to this server for now
+        lockWrite();
+
+        // If no reachable entries, no need to transfer entries to successor
+        if (reachableEntries == null || reachableEntries.isEmpty()) {
+            logger.info("No reachable entries to replicate. Done...");
+            unLockWrite();
+        }
+        // If there are reachable entries, send them to the next, prev node
+        else {
+            logger.info("Single entry found...replicating!");
+
+            // If there are at least 2 servers, send to prev
+            if (allMetadata.size() >= 2){
+                // Get the prev node
+                ECSNode prevNode = localMetadata.getPrevNode();
+                // Get metadata of destination server
+                Metadata transferServerMetadata = allMetadata
+                        .get(prevNode.getNodeHost() + ":" + prevNode.getNodePort());
+                // Build prev server name
+                String transferServerName = zooPathRootPrev + "/" + transferServerMetadata.getHost() + ":"
+                        + transferServerMetadata.getPort();
+                try {
+                    // Send admin message to destination
+                    // Message Type, metadata, data, to_server, from_server (allows recipient to
+                    // send confirmation back later)
+                    sendMessage(MessageType.REPLICATE_DATA, null, reachableEntries, transferServerName, zooPathServer);
+                    logger.info("*** Replicating single entry to prev! Sent a REPLICATE_DATA request to: " + transferServerName + " from " + zooPathServer);
+                } catch (InterruptedException | KeeperException e) {
+                    logger.error("Failed to replicate single entry to prev: ", e);
+                }
+            }
+
+            // If there are at least 3 servers, send to next
+            if (allMetadata.size() >= 3){
+                // Get the next node
+                ECSNode nextNode = localMetadata.getNextNode();
+                // Get metadata of destination server
+                Metadata transferServerMetadata = allMetadata
+                        .get(nextNode.getNodeHost() + ":" + nextNode.getNodePort());
+                // Build next server name
+                String transferServerName = zooPathRootNext + "/" + transferServerMetadata.getHost() + ":"
+                        + transferServerMetadata.getPort();
+                try {
+                    // Send admin message to destination
+                    // Message Type, metadata, data, to_server, from_server (allows recipient to
+                    // send confirmation back later)
+                    sendMessage(MessageType.REPLICATE_DATA, null, reachableEntries, transferServerName, zooPathServer);
+                    logger.info("*** Replicating single entry to next! Sent a REPLICATE_DATA request to: " + transferServerName + " from " + zooPathServer);
+                } catch (InterruptedException | KeeperException e) {
+                    logger.error("Failed to replicate single entry to next: ", e);
+                }
+            }
+            // TODO - check if we need to wait for confirmation that replication
+            // is complete, before unlocking
+            unLockWrite();
+        }
+    }
+
+
+    /**
      * Replicate KV Pairs on previous, next server if available
      * 
      * @param adminMessageString Admin message string from communications
      */
     @Override
-    public void replicate(String adminMessageString) {
-        // Process incoming admin message
-        AdminMessage incomingMessage = new AdminMessage(adminMessageString);
-
+    public void replicate() {
         // ************ Move data to correct server ************
         BigInteger begin = localMetadata.getHashStart();
         BigInteger end = localMetadata.getHashStop();
@@ -972,6 +1045,9 @@ public class KVServer implements IKVServer, Runnable {
 
         // Release the write lock since data is now up to date
         unLockWrite();
+
+        // Milestone 3: Add a replication call after metadata updated and entries transferred
+        replicate();
     }
 
     /**
@@ -1186,10 +1262,10 @@ public class KVServer implements IKVServer, Runnable {
             } else if (incomingMessageType == MessageType.REPLICATE_START) {
                 // Ask root server to replicate its KV pairs to prev, next servers
                 logger.info("Got admin message REPLICATE_START!");
-                replicate(adminMessageString);
+                replicate();
             } else if (incomingMessageType == MessageType.REPLICATE_DATA) {
                 // Receieve replicant KV pairs, save to disk
-                logger.info("Got admin message REPLICATE_DATA (receiving incoming replicas!)");
+                logger.info("Got admin message REPLICATE_DATA (receiving incoming replica(s)!)");
                 processReplicas(adminMessageString);
             }
             // else if (incomingMessageType == MessageType.LOCKWRITE){

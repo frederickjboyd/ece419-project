@@ -84,6 +84,18 @@ public class KVCommunicationServer extends KVCommunicationClient implements Runn
         String returnMsgValue = "";
         KVMessage returnMsg = null;
 
+        // added for crash scenario
+        if (server.getStatus().toString() == "CRASH") {
+            returnMsgType = StatusType.SERVER_CRASHED;
+            logger.info("Server has crashed reconnect first - cannot process incoming client requests!");
+            try {
+                returnMsg = new KVMessage(returnMsgType, msgKey, returnMsgValue);
+            } catch (Exception e) {
+                logger.error(e.getMessage());
+            }
+            return returnMsg;
+        }
+
         // Deny all KVMessages if server is stopped (only ECS permitted)
         if (server.getStatus().toString() == "STOP") {
             returnMsgType = StatusType.SERVER_STOPPED;
@@ -95,6 +107,7 @@ public class KVCommunicationServer extends KVCommunicationClient implements Runn
             }
             return returnMsg;
         }
+
 
         switch (msg.getStatus()) {
             case GET:

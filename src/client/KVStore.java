@@ -46,16 +46,16 @@ public class KVStore {
             logger.error("Unable to parse argument <port>", nfe);
             throw new NumberFormatException();
         } catch (UnknownHostException e) {
-            // logger.error("Unknown Host!", e);
+            logger.error("Unknown Host!", e);
             throw new UnknownHostException();
         } catch (IllegalArgumentException e) {
-            // logger.error("Unknown Host!", e);
+            logger.error("Unknown Host!", e);
             throw new IllegalArgumentException();
         } catch (IOException e) {
-            logger.error("Could not establish connection!", e);
+            logger.error("Could not establish connection, check server!", e);
             throw new IOException();
         } catch (Exception e) {
-            logger.error("Other exception", e);
+            logger.error("Other exception, maybe check server", e);
             throw new Exception();
         }
     }
@@ -81,8 +81,13 @@ public class KVStore {
         KVMessage kvmessageReceived = null;
         kvmessageReceived = kvCommunication.receiveMessage();
 
+        if (kvmessageReceived.getStatus() == KVMessage.StatusType.SERVER_STOPPED) { // or SERVER_CRASHED
+            System.out.println("Server crashed, trying to connect to other server..");
+            logger.error("current server crashed");
+            relocateServer();
+        }
+
         if (kvmessageReceived.getStatus() == KVMessage.StatusType.SERVER_NOT_RESPONSIBLE) {
-            // kvmessageReceived=checkServer(kvmessage);
             checkAndUpdateServer(kvmessageReceived, key);
             kvCommunication.sendMessage(kvmessage);
             kvmessageReceived = kvCommunication.receiveMessage();
@@ -97,17 +102,22 @@ public class KVStore {
         KVMessage kvmessageReceived = null;
         kvmessageReceived = kvCommunication.receiveMessage();
 
+        if (kvmessageReceived.getStatus() == KVMessage.StatusType.SERVER_STOPPED) { // or SERVER_CRASHED
+            System.out.println("Server crashed, trying to connect to other server..");
+            logger.error("current server crashed");
+            relocateServer();
+        }
+
         if (kvmessageReceived.getStatus() == KVMessage.StatusType.SERVER_NOT_RESPONSIBLE) {
-            // kvmessageReceived=checkServer(kvmessage);
             checkAndUpdateServer(kvmessageReceived, key);
             kvCommunication.sendMessage(kvmessage);
             kvmessageReceived = kvCommunication.receiveMessage();
-
         }
 
         return kvmessageReceived;
     }
 
+    
     public void checkAndUpdateServer(KVMessage kvmessageReceived, String key) {
 
         if (kvmessageReceived.getStatus() == KVMessage.StatusType.SERVER_NOT_RESPONSIBLE) {
@@ -184,11 +194,13 @@ public class KVStore {
         return (kvCommunication != null) && (kvCommunication.getIsOpen());
     }
 
-    public KVMessage checkServer(KVMessage msg) throws Exception {
-        System.out.println("Server not found, searching and reconnecting");
+    public void relocateServer() throws Exception {
+        System.out.println("searching and reconnecting");
         logger.info("Server not found, searching and reconnecting");
 
         if (metadata == null) {
+            System.out.println("No other server available");
+
             throw new Exception("Metadata empty, no server available");
         }
 
@@ -202,29 +214,19 @@ public class KVStore {
 
             try {
                 connect();
-                kvCommunication.sendMessage(msg);
-                kvmessageReceived = kvCommunication.receiveMessage();
-
                 String infoMsg = String.format("Switched to server %s and port:%s",
                         this.address, this.port);
                 logger.info(infoMsg);
-                return kvmessageReceived;
-
-            } catch (Exception e) {
-                logger.error("new connection failed, origin server and port connection restored");
-                kvCommunication.sendMessage(msg);
-                kvmessageReceived = kvCommunication.receiveMessage();
-                // return kvmessageReceived;
-
-            }
+                return;
+            } catch(Exception e){}
             System.out.println(i);
             // break;
         }
-
         if (i >= metadata.size()) {
-            throw new Exception("No server available");
+            System.out.println("No other server available");
 
+            throw new Exception("No server available, please check server connection");
         }
-        return kvmessageReceived;
+        return ;
     }
 }

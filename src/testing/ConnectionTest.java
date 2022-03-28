@@ -9,50 +9,52 @@ import junit.framework.TestCase;
 import java.util.List;
 
 public class ConnectionTest extends TestCase {
+    private KVStore kvClient;
+    private KVStore kvClient1;
+    private KVStore kvClient2;
+    private String cacheStrategy = "FIFO";
+    private int cacheSize = 500;
+    private String host;
+    private int port;
+    private int numServers = 5;
+    private String ECSConfigPath = System.getProperty("user.dir") + "/ecs.config";
+    private List<ECSNode> nodesAdded;
+    private ECSClient ecs;
+    private Exception ex;
 
-    public void testConnectionSuccess() {
-        Exception ex = null;
-        // CacheStrategy cacheStrategy = CacheStrategy.FIFO;
-        String cacheStrategy = "FIFO";
-
-        int cacheSize = 500;
-        String host;
-        int port;
-        int numServers = 5;
-        String ECSConfigPath = System.getProperty("user.dir") + "/ecs.config";
-        // System.out.println(ECSConfigPath);
-        List<ECSNode> nodesAdded;
-        ECSClient ecs;
-
-        // List<ECSNode> nodesAdded = new ArrayList<ECSNode>()
+    public void setUp() {
         ecs = new ECSClient(ECSConfigPath);
         nodesAdded = ecs.addNodes(numServers, cacheStrategy, cacheSize);
+
         try {
             ecs.start();
         } catch (Exception e) {
             System.out.println("ECS Performance Test failed on ECSClient init: " + e);
         }
-
-        // List<ECSNode> nodesAdded = addNodes(1, cacheStrategy, cacheSize);
+        
         host = nodesAdded.get(0).getNodeHost();
         port = nodesAdded.get(0).getNodePort();
+        
+        System.out.println("connection test set up success");
+    }
 
+
+    public void testConnectionSuccess() {
         // kvClient = new KVStore("localhost", 50000);
         KVStore kvClient = new KVStore(host, port);
 
-        // KVStore kvClient = new KVStore("localhost", 50000);
         try {
             kvClient.connect();
         } catch (Exception e) {
-            ex = e;
+            ex=e;
         }
 
         assertNull(ex);
     }
 
-    public void testUnknownHost() {
+    public void atestUnknownHost() {
         Exception ex = null;
-        KVStore kvClient = new KVStore("unknown", 50000);
+        KVStore kvClient = new KVStore("unknown", port);
 
         try {
             kvClient.connect();
@@ -63,9 +65,9 @@ public class ConnectionTest extends TestCase {
         assertTrue(ex instanceof UnknownHostException);
     }
 
-    public void testIllegalPort() {
+    public void atestIllegalPort() {
         Exception ex = null;
-        KVStore kvClient = new KVStore("localhost", 123456789);
+        KVStore kvClient = new KVStore(host, 123456789);
 
         try {
             kvClient.connect();

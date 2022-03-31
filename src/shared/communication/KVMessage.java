@@ -245,7 +245,7 @@ public class KVMessage implements IKVMessage, Serializable {
         return this.statusType;
     }
 
-    public List<Metadata> updateMetadata() {
+    public List<Metadata> updateMetadata(String serverIP) {
         // placeholder atm
         // Need to move to somewhere where the metadata string exists
         if (this.statusType != StatusType.SERVER_NOT_RESPONSIBLE) {
@@ -257,12 +257,18 @@ public class KVMessage implements IKVMessage, Serializable {
         JSONObject metadata_jo = new JSONObject(value);
         ArrayList<Metadata> metadata_list = new ArrayList<>();
         Iterator<String> keys = metadata_jo.keys();
-
+        Metadata temp=null;
         while (keys.hasNext()) {
             String key = keys.next();
             JSONObject obj = (JSONObject) metadata_jo.get(key);
-            Metadata temp = new Metadata(obj.getString("host"), obj.getInt("port"),
-                    obj.getBigInteger("hashStart"), obj.getBigInteger("hashStop"));
+            if (obj.getString("host") == "localhost") {
+                temp = new Metadata(serverIP, obj.getInt("port"),obj.getBigInteger("hashStart"), obj.getBigInteger("hashStop"));
+            } else {
+                temp = new Metadata(obj.getString("host"), obj.getInt("port"),obj.getBigInteger("hashStart"), obj.getBigInteger("hashStop"));
+            }
+            // Metadata temp = new Metadata(obj.getString("host"), obj.getInt("port"),obj.getBigInteger("hashStart"), obj.getBigInteger("hashStop"));
+
+            
             metadata_list.add(temp);
         }
 

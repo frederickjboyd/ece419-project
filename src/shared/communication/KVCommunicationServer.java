@@ -84,7 +84,7 @@ public class KVCommunicationServer extends KVCommunicationClient implements Runn
         String returnMsgValue = "";
         KVMessage returnMsg = null;
 
-        // added for crash scenario
+        // added for crash scenario if it's gonna be used 
         if (server.getStatus().toString() == "CRASH") {
             returnMsgType = StatusType.SERVER_CRASHED;
             logger.info("Server has crashed reconnect first - cannot process incoming client requests!");
@@ -257,6 +257,8 @@ public class KVCommunicationServer extends KVCommunicationClient implements Runn
                 KVMessage newMsg = receiveMessage();
                 KVMessage returnMsg = handleMsg(newMsg);
                 sendMessage(returnMsg);
+                logger.info("Server receive handle send done!");
+
             } catch (IOException io) {
                 logger.error("Server lost connection!", io);
                 setIsOpen(false);

@@ -8,7 +8,8 @@ import java.net.UnknownHostException;
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 import logger.LogSetup;
-
+import shared.communication.KVMessage;
+import shared.communication.IKVMessage.StatusType;
 import client.KVStore;
 
 import logger.LogSetup;
@@ -41,7 +42,7 @@ public class KVClient implements IKVClient {
             kvStore.connect();
             logger.info("kvclient: New connection established");
         } catch (IOException ioe) {
-            logger.error("kvclient: to establish new connection!");
+            logger.error("kvclient: failed to establish new connection!");
 
         }
     }
@@ -132,8 +133,14 @@ public class KVClient implements IKVClient {
 
                     try {
                         // kvStore.put(tokens[1].toString(), msg.toString());
-                        kvStore.put(key, value);
-                        logger.info("kvclient Update database with Key: " + key + " and values:" + value);
+                        KVMessage receivedMsg = kvStore.put(key, value);
+                        if (receivedMsg.getStatus()== StatusType.SERVER_STOPPED) {
+                            logger.info("server is not functioning, values not stored");
+                        } else {
+                            logger.info("kvclient Update database" + this.serverPort + "with Key: " + key + " and values:" + value);
+                            logger.info(receivedMsg.getValue());
+                        }
+                        
                     } catch (Exception e) {
                         // e.getMessage();
                         logger.error("kvclient put exception", e);
@@ -160,8 +167,15 @@ public class KVClient implements IKVClient {
                         }
                     }
                     try {
-                        kvStore.get(tokens[1]);
-                        logger.info("kvclient GET: retrieve Key: " + tokens[1] + " from server");
+                        
+                        KVMessage receivedMsg = kvStore.get(tokens[1]);
+                        if (receivedMsg.getStatus()== StatusType.SERVER_STOPPED) {
+                            logger.info("server is not functioning, values not fetched");
+                        } else {
+                            logger.info("kvclient GET: retrieve Key: " + tokens[1] + " from server");
+                        }
+
+                        
                     } catch (Exception e) {
                         logger.error("kvclient get exception", e);
                     }

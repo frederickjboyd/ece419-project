@@ -553,7 +553,7 @@ public class ECSClient implements IECSClient {
     /**
      * Remove all *.out and *.log files from the log folder.
      */
-    private void cleanLogs() {
+    public void cleanLogs() {
         File dir = new File("logs");
         File fList[] = dir.listFiles();
 
@@ -573,7 +573,7 @@ public class ECSClient implements IECSClient {
     /**
      * Remove all *.properties files from the data folder.
      */
-    private void cleanData() {
+    public void cleanData() {
         File dir = new File("data");
         File fList[] = dir.listFiles();
 

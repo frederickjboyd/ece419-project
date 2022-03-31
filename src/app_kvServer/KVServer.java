@@ -482,13 +482,15 @@ public class KVServer implements IKVServer, Runnable {
         if (cache.cacheActiveStatus() == true) {
             value = cache.getCache(key);
             // Value was in cache
-            if (value != null) {
+
+            if (value != null && value != "") {
                 return value;
             }
         }
         // Value was not in cache, look on disk
         value = storage.get(key);
-        if (value == null) {
+
+        if (value.equals("") || value == null) {
             logger.error("Key: " + key + " cannot be found on storage!");
             throw new Exception("Failed to find key in storage!");
         } else {
@@ -1079,7 +1081,7 @@ public class KVServer implements IKVServer, Runnable {
         while (itr.hasNext()) {
             Map.Entry<String, String> entry = itr.next();
             // TODO - Check this logic
-            if (entry.getValue().toString().equals("")) {
+            if ( (entry.getValue().toString().equals("") || entry.getValue().toString().equals("null") || entry.getValue().length()==0)) {
                 // No cache (old version)
                 // storage.delete(entry.getKey());
                 // Cached version
@@ -1144,8 +1146,12 @@ public class KVServer implements IKVServer, Runnable {
 
         String replicaString = null;
         for (Map.Entry<String, String> entry : incomingData.entrySet()) {
-            replicaString += (entry.getKey() + '[' + entry.getValue() + ']');
+            if (entry.getValue()!= null && entry.getValue().toString()!= "null" && entry.getValue().length()!=0 ) {
+                replicaString += (entry.getKey() + '[' + entry.getValue() + ']');
+            }
         }
+       
+
         logger.info("Received entries to replicate: " + replicaString);
 
         Iterator<Map.Entry<String, String>> itr = incomingData.entrySet().iterator();
@@ -1153,7 +1159,7 @@ public class KVServer implements IKVServer, Runnable {
         while (itr.hasNext()) {
             Map.Entry<String, String> entry = itr.next();
             // TODO - Check this logic
-            if (entry.getValue().toString().equals("")) {
+            if (entry.getValue().toString().equals("") || entry.getValue().toString().equals("null") || entry.getValue().length()==0) {
                 try {
                     putKV(entry.getKey().toString(), "");
                 } catch (Exception e) {

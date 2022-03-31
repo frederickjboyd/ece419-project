@@ -84,6 +84,18 @@ public class KVCommunicationServer extends KVCommunicationClient implements Runn
         String returnMsgValue = "";
         KVMessage returnMsg = null;
 
+        // added for crash scenario if it's gonna be used 
+        if (server.getStatus().toString() == "CRASH") {
+            returnMsgType = StatusType.SERVER_CRASHED;
+            logger.info("Server has crashed reconnect first - cannot process incoming client requests!");
+            try {
+                returnMsg = new KVMessage(returnMsgType, msgKey, returnMsgValue);
+            } catch (Exception e) {
+                logger.error(e.getMessage());
+            }
+            return returnMsg;
+        }
+
         // Deny all KVMessages if server is stopped (only ECS permitted)
         if (server.getStatus().toString() == "STOP") {
             returnMsgType = StatusType.SERVER_STOPPED;
@@ -95,6 +107,7 @@ public class KVCommunicationServer extends KVCommunicationClient implements Runn
             }
             return returnMsg;
         }
+
 
         switch (msg.getStatus()) {
             case GET:
@@ -113,10 +126,12 @@ public class KVCommunicationServer extends KVCommunicationClient implements Runn
                     return returnMsg;
 
                 }
+
                 try {
                     returnMsgValue = server.getKV(msgKey);
                     returnMsgType = StatusType.GET_SUCCESS;
                     logger.info(String.format("%s: %s, %s", returnMsgType.toString(), msgKey, returnMsgValue));
+
                 } catch (Exception e) {
                     returnMsgType = StatusType.GET_ERROR;
                     logger.error(String.format("%s: %s", returnMsgType.toString(), msgKey));
@@ -151,7 +166,7 @@ public class KVCommunicationServer extends KVCommunicationClient implements Runn
                     return returnMsg;
                 }
 
-                if (msg.getValue().equals("") || msg.getValue().equals("null")) { // Delete
+                if (msg.getValue().equals("") || msg.getValue().equals("null") || msg.getValue().equals(null)) { // Delete
                     logger.trace("PUT DELETE");
 
                     try {
@@ -247,6 +262,8 @@ public class KVCommunicationServer extends KVCommunicationClient implements Runn
                 KVMessage newMsg = receiveMessage();
                 KVMessage returnMsg = handleMsg(newMsg);
                 sendMessage(returnMsg);
+                logger.info("Server receive handle send done!");
+
             } catch (IOException io) {
                 logger.error("Server lost connection!", io);
                 setIsOpen(false);

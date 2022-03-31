@@ -198,7 +198,10 @@ public class KVCommunicationServer extends KVCommunicationClient implements Runn
                     logger.info(String.format("%s: %s, %s", returnMsgType.toString(), msgKey, returnMsgValue));
                 }
 
-                if (server.distributed()) {
+                if (server.distributed() && msg.getValue().equals("") || msg.getValue().equals("null")) {
+                    // Delete
+                    server.replicateSingleEntry(msgKey, "");
+                } else {
                     server.replicateSingleEntry(msgKey, msg.getValue());
                 }
 

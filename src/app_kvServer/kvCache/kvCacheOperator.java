@@ -60,7 +60,9 @@ public class kvCacheOperator {
         try {
             if (cache != null) {
                 value = cache.read(key);
-                if (value != null) {
+                logger.info("cacheread "+value+ value.length());
+
+                if (value != null && value != "" && value != "null" && value.length()!=0) {
                     logger.info("Succesfully retrieved key-val from cache: K:" + key + ",V:" + value);
                     return value;
                 } else {

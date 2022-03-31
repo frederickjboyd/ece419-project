@@ -26,6 +26,7 @@ import java.io.FileReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.math.BigInteger;
+import java.net.InetAddress;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -78,6 +79,17 @@ public class ECSClient implements IECSClient {
         // launch (i.e. servers)
         initialJavaPIDs = getJavaPIDs();
 
+        String ip = null;
+
+        try {
+            InetAddress addr = InetAddress.getLocalHost();
+            ip = addr.getHostAddress();
+            logger.debug(String.format("Local IP: %s", ip));
+        } catch (Exception e) {
+            logger.error("Unable to get local IP");
+            e.printStackTrace();
+        }
+
         try {
             // Read configuration file
             BufferedReader reader = new BufferedReader(new FileReader(configPath));
@@ -87,8 +99,7 @@ public class ECSClient implements IECSClient {
             while ((l = reader.readLine()) != null) {
                 String[] config = l.split("\\s+", 3);
                 logger.trace(String.format("%s => %s:%s", config[0], config[1], config[2]));
-                serverStatusInfo.put(String.format("%s:%s:%s", config[0], config[1], config[2]),
-                        NodeStatus.OFFLINE);
+                serverStatusInfo.put(String.format("%s:%s:%s", config[0], ip, config[2]), NodeStatus.OFFLINE);
             }
 
             // Initialize hash ring

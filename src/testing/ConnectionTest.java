@@ -1,7 +1,5 @@
 package testing;
-
 import java.net.UnknownHostException;
-
 import client.KVStore;
 import app_kvECS.ECSClient;
 import ecs.ECSNode;

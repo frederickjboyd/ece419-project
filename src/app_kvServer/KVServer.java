@@ -182,6 +182,7 @@ public class KVServer implements IKVServer, Runnable {
 
         // Configure zookeeper
         this.zooPathServer = zooPathRoot + "/" + name;
+
         this.zooHost = zooHost;
         this.zooPort = zooPort;
 
@@ -429,7 +430,10 @@ public class KVServer implements IKVServer, Runnable {
     public String getHostname() {
         String hostname = "";
         try {
-            hostname = InetAddress.getLocalHost().getHostName();
+            hostname = InetAddress.getLocalHost().getHostAddress();
+            logger.info("hostname");
+
+            logger.info(hostname);
         } catch (UnknownHostException e) {
             logger.error("The IP address of server host cannot be resolved. \n", e);
         }

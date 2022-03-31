@@ -89,7 +89,6 @@ public class KVStore {
         
         if (kvmessageReceived.getStatus() == KVMessage.StatusType.SERVER_STOPPED) {
             logger.info("current server stopped, trying to relocate");
-
             kvmessageReceived = relocateServer(kvmessage);
             // System.out.println(12);
         } 
@@ -147,7 +146,7 @@ public class KVStore {
 
         if (kvmessageReceived.getStatus() == KVMessage.StatusType.SERVER_NOT_RESPONSIBLE) {
             // if the server is not the supposed to be server then request metadata update
-            metadata = kvmessageReceived.updateMetadata();
+            metadata = kvmessageReceived.updateMetadata(this.address);
             BigInteger hexkeyInt = null;
 
             try {
@@ -242,7 +241,7 @@ public class KVStore {
                 connect();
                 kvCommunication.sendMessage(kvmessage);
 			    kvmessageReceived = kvCommunication.receiveMessage();
-                metadata = kvmessageReceived.updateMetadata();
+                metadata = kvmessageReceived.updateMetadata(this.address);
 
                 String infoMsg = String.format("Switched to server %s and port:%s",
                         this.address, this.port);

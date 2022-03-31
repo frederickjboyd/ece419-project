@@ -40,6 +40,7 @@ public class KVClient implements IKVClient {
         try {
             kvStore = new KVStore(hostname, port);
             kvStore.connect();
+            
             logger.info("kvclient: New connection established");
         } catch (IOException ioe) {
             logger.error("kvclient: failed to establish new connection!");

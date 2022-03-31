@@ -79,17 +79,6 @@ public class ECSClient implements IECSClient {
         // launch (i.e. servers)
         initialJavaPIDs = getJavaPIDs();
 
-        String ip = null;
-
-        try {
-            InetAddress addr = InetAddress.getLocalHost();
-            ip = addr.getHostAddress();
-            logger.debug(String.format("Local IP: %s", ip));
-        } catch (Exception e) {
-            logger.error("Unable to get local IP");
-            e.printStackTrace();
-        }
-
         try {
             // Read configuration file
             BufferedReader reader = new BufferedReader(new FileReader(configPath));
@@ -99,7 +88,7 @@ public class ECSClient implements IECSClient {
             while ((l = reader.readLine()) != null) {
                 String[] config = l.split("\\s+", 3);
                 logger.trace(String.format("%s => %s:%s", config[0], config[1], config[2]));
-                serverStatusInfo.put(String.format("%s:%s:%s", config[0], ip, config[2]), NodeStatus.OFFLINE);
+                serverStatusInfo.put(String.format("%s:%s:%s", config[0], config[1], config[2]), NodeStatus.OFFLINE);
             }
 
             // Initialize hash ring
@@ -860,6 +849,24 @@ public class ECSClient implements IECSClient {
         logger.trace(String.format("Constructed zkNodePath: %s", zkNodePath));
         DebugHelper.logFuncExit(logger);
         return zkNodePath;
+    }
+
+    /**
+     * Get system's local IP.
+     */
+    public String getLocalIP() {
+        String ip = null;
+
+        try {
+            InetAddress addr = InetAddress.getLocalHost();
+            ip = addr.getHostAddress();
+            logger.debug(String.format("Local IP: %s", ip));
+        } catch (Exception e) {
+            logger.error("Unable to get local IP");
+            e.printStackTrace();
+        }
+
+        return ip;
     }
 
     private void handleCommand(String cmdLine) throws Exception {

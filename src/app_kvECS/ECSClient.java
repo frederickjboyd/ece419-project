@@ -846,7 +846,7 @@ public class ECSClient implements IECSClient {
         DebugHelper.logFuncEnter(logger);
         String hostAndPort = getHostAndPort(serverInfo);
         String zkNodePath = String.format("%s/%s", ZK_ROOT_PATH, hostAndPort);
-        logger.debug(String.format("Constructed zkNodePath: %s", zkNodePath));
+        logger.trace(String.format("Constructed zkNodePath: %s", zkNodePath));
         DebugHelper.logFuncExit(logger);
         return zkNodePath;
     }

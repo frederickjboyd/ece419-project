@@ -482,8 +482,6 @@ public class KVServer implements IKVServer, Runnable {
         if (cache.cacheActiveStatus() == true) {
             value = cache.getCache(key);
             // Value was in cache
-            logger.info("value is " + value);
-
 
             if (value != null && value != "") {
                 return value;
@@ -491,7 +489,6 @@ public class KVServer implements IKVServer, Runnable {
         }
         // Value was not in cache, look on disk
         value = storage.get(key);
-        logger.info("value2 is " + value);
 
         if (value.equals("") || value == null) {
             logger.error("Key: " + key + " cannot be found on storage!");

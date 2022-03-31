@@ -83,7 +83,7 @@ public class KVStore {
         // current implementation for m3
         try{
             kvmessageReceived = kvCommunication.receiveMessage();
-        } catch (IOException e){
+        } catch (Exception e){
             kvmessageReceived = relocateServer(kvmessage);
 		}
         
@@ -116,7 +116,7 @@ public class KVStore {
 
         try{
             kvmessageReceived = kvCommunication.receiveMessage();
-        } catch (IOException e){
+        } catch (Exception e){
             kvmessageReceived = relocateServer(kvmessage);
         }
         
@@ -178,6 +178,8 @@ public class KVStore {
 
                     try {
                         connect();
+                        this.address = address;
+                        this.port = port;
                         String infoMsg = String.format("Metadata updated and switched to server %s and port:%s",
                                 address, port);
                         System.out.println(infoMsg);

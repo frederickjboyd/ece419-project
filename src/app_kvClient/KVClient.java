@@ -134,13 +134,13 @@ public class KVClient implements IKVClient {
                     try {
                         // kvStore.put(tokens[1].toString(), msg.toString());
                         KVMessage receivedMsg = kvStore.put(key, value);
-                        if (receivedMsg.getStatus()== StatusType.SERVER_STOPPED) {
+                        if (receivedMsg.getStatus() == StatusType.SERVER_STOPPED) {
                             logger.info("server is not functioning, values not stored");
                         } else {
-                            logger.info("kvclient Update database" + this.serverPort + "with Key: " + key + " and values:" + value);
+                            logger.info("kvclient Update database " + " with Key: " + key + " and values:" + value);
                             logger.info(receivedMsg.getValue());
                         }
-                        
+
                     } catch (Exception e) {
                         // e.getMessage();
                         logger.error("kvclient put exception", e);
@@ -167,15 +167,14 @@ public class KVClient implements IKVClient {
                         }
                     }
                     try {
-                        
+
                         KVMessage receivedMsg = kvStore.get(tokens[1]);
-                        if (receivedMsg.getStatus()== StatusType.SERVER_STOPPED) {
+                        if (receivedMsg.getStatus() == StatusType.SERVER_STOPPED) {
                             logger.info("server is not functioning, values not fetched");
                         } else {
-                            logger.info("kvclient GET: retrieve Key: " + tokens[1] + " from server");
+                            logger.info("kvclient GET on port" + ": retrieve Key: " + tokens[1] + " from server");
                         }
 
-                        
                     } catch (Exception e) {
                         logger.error("kvclient get exception", e);
                     }

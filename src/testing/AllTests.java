@@ -28,6 +28,7 @@ public class AllTests {
         // clientSuite.addTestSuite(InteractionTest.class);
         // clientSuite.addTestSuite(AdditionalTest.class);
         // clientSuite.addTestSuite(PerformanceTest.class);
+        // Special performance testing file
         clientSuite.addTestSuite(M3PerformanceTest.class);
         // clientSuite.addTestSuite(HashRingTest.class);
         // clientSuite.addTestSuite(newConnectionTest.class);

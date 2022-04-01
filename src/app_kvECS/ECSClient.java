@@ -161,16 +161,16 @@ public class ECSClient implements IECSClient {
     }
 
     @Override
-    public ECSNode addNode(String cacheStrategy, int cacheSize) {
+    public ECSNode addNode(String cacheStrategy, int cacheSize, boolean isFailure) {
         DebugHelper.logFuncEnter(logger);
-        List<ECSNode> nodesAdded = addNodes(1, cacheStrategy, cacheSize);
+        List<ECSNode> nodesAdded = addNodes(1, cacheStrategy, cacheSize, isFailure);
         DebugHelper.logFuncExit(logger);
 
         return nodesAdded.get(0);
     }
 
     @Override
-    public List<ECSNode> addNodes(int count, String cacheStrategyStr, int cacheSize) {
+    public List<ECSNode> addNodes(int count, String cacheStrategyStr, int cacheSize, boolean isFailure) {
         DebugHelper.logFuncEnter(logger);
 
         if (unavailableServers.size() == serverStatusInfo.size()) {
@@ -243,7 +243,7 @@ public class ECSClient implements IECSClient {
             logger.error("awaitNodes failed");
         }
 
-        setupNodes(count, cacheStrategyEnum, cacheSize, serverInfoAdded);
+        setupNodes(count, cacheStrategyEnum, cacheSize, serverInfoAdded, isFailure);
 
         // Set up ZooKeeper watcher to detect when a node goes offline
         for (String serverInfo : serverInfoAdded) {
@@ -257,7 +257,7 @@ public class ECSClient implements IECSClient {
 
     @Override
     public Collection<ECSNode> setupNodes(int count, CacheStrategy cacheStrategy, int cacheSize,
-            List<String> serversToSetup) {
+            List<String> serversToSetup, boolean isFailure) {
         DebugHelper.logFuncEnter(logger);
 
         if (!isServerCountValid(count)) {
@@ -291,6 +291,11 @@ public class ECSClient implements IECSClient {
         List<String> serversToUpdate = new ArrayList<String>(unavailableServers);
         logger.info(String.format("unavailableServers: %s", serversToUpdate));
         serversToUpdate.removeAll(serversToSetup);
+
+        if (isFailure) {
+            awaitTime(40000);
+        }
+
         updateNodeMetadata(serversToUpdate);
 
         DebugHelper.logFuncExit(logger);
@@ -378,7 +383,7 @@ public class ECSClient implements IECSClient {
                     failedNodeList.add(serverInfo);
                     removeNodes(failedNodeList, true);
                     // Start up replacement
-                    addNode(oldCacheStrategy.toString(), oldCacheSize);
+                    addNode(oldCacheStrategy.toString(), oldCacheSize, true);
 
                     if (oldStatus == NodeStatus.ONLINE) {
                         start();
@@ -887,7 +892,7 @@ public class ECSClient implements IECSClient {
                     int count = Integer.parseInt(tokens[1]);
                     String cacheStrategy = tokens[2];
                     int cacheSize = Integer.parseInt(tokens[3]);
-                    addNodes(count, cacheStrategy, cacheSize);
+                    addNodes(count, cacheStrategy, cacheSize, false);
                 } catch (Exception e) {
                     throw new Exception("Unable to parse input.");
                 }
@@ -904,7 +909,7 @@ public class ECSClient implements IECSClient {
                 try {
                     String cacheStrategy = tokens[1];
                     int cacheSize = Integer.parseInt(tokens[2]);
-                    addNode(cacheStrategy, cacheSize);
+                    addNode(cacheStrategy, cacheSize, false);
                 } catch (Exception e) {
                     throw new Exception("Unable to parse input.");
                 }

@@ -93,16 +93,16 @@ public class M3ClientFailureHandling extends TestCase {
         }
         assertTrue(ex == null&& (response.getStatus() == StatusType.PUT_SUCCESS || response.getStatus() == StatusType.PUT_UPDATE));
         System.out.println("initial put success");
-        int initPort1 = kvClientList.get(0).getCurrentPort();
-        int initPort2 = kvClientList.get(1).getCurrentPort();
+        // int initPort1 = kvClientList.get(0).getCurrentPort();
+        // int initPort2 = kvClientList.get(1).getCurrentPort();
 
 
         System.out.println("Initial");
-        System.out.println(kvClientList.get(0).getCurrentAddress());
-        System.out.println(kvClientList.get(0).getCurrentPort());
+        // System.out.println(kvClientList.get(0).getCurrentAddress());
+        // System.out.println(kvClientList.get(0).getCurrentPort());
         
-        System.out.println(kvClientList.get(1).getCurrentAddress());
-        System.out.println(kvClientList.get(1).getCurrentPort());
+        // System.out.println(kvClientList.get(1).getCurrentAddress());
+        // System.out.println(kvClientList.get(1).getCurrentPort());
 
         // crash server 
         // server killable 
@@ -113,7 +113,7 @@ public class M3ClientFailureHandling extends TestCase {
 
         StringBuilder killCmd = new StringBuilder();
         killCmd.append("kill ");
-        killCmd.append(killableProcess.get(1));
+        killCmd.append(killableProcess.get(0));
         System.out.println(killCmd);
 
         try {
@@ -123,12 +123,12 @@ public class M3ClientFailureHandling extends TestCase {
             e.printStackTrace();
         }
         
-        try{
-            ecs.awaitNodes(numServers, 45000);
-        }
-        catch(Exception e){
-            System.out.println("Failed to await nodes!");
-        }
+        // try{
+        //     ecs.awaitNodes(numServers, 45000);
+        // }
+        // catch(Exception e){
+        //     System.out.println("Failed to await nodes!");
+        // }
 
         // try putting 
         String newkey = "new";
@@ -142,17 +142,26 @@ public class M3ClientFailureHandling extends TestCase {
         System.out.println("recovered put success");
         System.out.println(response.getStatus());
 
-        
-
-        assertTrue(ex == null && initPort1 != kvClientList.get(0).getCurrentPort() && (response.getStatus() == StatusType.PUT_UPDATE));
+        assertTrue(ex == null && response.getStatus()==StatusType.PUT_SUCCESS);
 
         // try updating 
-        // try {
-        //     response = kvClientList.get(0).put(key1, value);
-        // } catch (Exception e) {
-        //     ex = e;
-        // }
-        // assertTrue(ex == null && initPort1 != kvClientList.get(0).getCurrentPort() && (response.getStatus() == StatusType.PUT_SUCCESS));
+        try {
+            response = kvClientList.get(0).put(key1, value);
+        } catch (Exception e) {
+            ex = e;
+        }
+        assertTrue(ex == null && (response.getStatus() == StatusType.PUT_UPDATE));
+        System.out.println("recovered update success");
+        System.out.println(response.getStatus());
+
+        try {
+            response = kvClientList.get(0).get(key1);
+        } catch (Exception e) {
+            ex = e;
+        }
+        assertTrue(ex == null && (response.getStatus() == StatusType.GET_SUCCESS));
+        System.out.println("recovered get success");
+        System.out.println(response.getStatus());
 
 
         // try {
@@ -185,7 +194,7 @@ public class M3ClientFailureHandling extends TestCase {
             ecs.cleanData();
             ecs.cleanLogs();
             ecs.quit();
-            System.out.println("Shutdown performance - success");
+            System.out.println("Shutdown - success");
         } catch (Exception e) {
             System.err.println("Failed to shut down ECS!");
         }

@@ -151,6 +151,7 @@ public class KVStore {
     }
     
     public void checkAndUpdateServer(KVMessage kvmessageReceived, String key) {
+        System.out.println("checkAndUpdateServer in progress");
 
         if (kvmessageReceived.getStatus() == KVMessage.StatusType.SERVER_NOT_RESPONSIBLE) {
             // if the server is not the supposed to be server then request metadata update

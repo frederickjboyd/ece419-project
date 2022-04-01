@@ -28,8 +28,8 @@ public class M3PerformanceTest_multiclient extends TestCase {
     private static final int numServers = 10;
     private static final String cacheStrategy = "FIFO";
     private static final int cacheSize = 500;
-    // Number of clients
-    private static final int numClients = 20;
+    // Number of clients (current only supports <=5)
+    private static final int numClients = 5;
 
     public void setUp(){
         System.out.println("Begin performance test.....");

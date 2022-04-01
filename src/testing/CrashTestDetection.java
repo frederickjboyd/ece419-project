@@ -97,6 +97,10 @@ public class CrashTestDetection extends TestCase {
         // Manually kill all new "java" processes
         List<Integer> javaPIDs = getJavaPIDs();
 
+        System.out.println("Initial PIDs (before starting servers): " + initialJavaPIDs);
+        System.out.println("Current PIDs (after starting servers): " +  javaPIDs);
+
+
         // Construct kill command
         StringBuilder killCmd = new StringBuilder();
         killCmd.append("kill ");

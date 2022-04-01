@@ -89,7 +89,7 @@ public class KVStore {
 		}
         
         if (kvmessageReceived.getStatus() == KVMessage.StatusType.SERVER_STOPPED) {
-            logger.info("current server stopped, trying to relocate");
+            logger.info("get: current server stopped, trying to relocate");
             kvmessageReceived = relocateServer(kvmessage);
             // System.out.println(12);
         } 
@@ -142,6 +142,13 @@ public class KVStore {
         return kvmessageReceived;
     }
 
+    public String getCurrentAddress() {
+        return this.address;
+    }
+
+    public int getCurrentPort() {
+        return this.port;
+    }
     
     public void checkAndUpdateServer(KVMessage kvmessageReceived, String key) {
 
@@ -224,6 +231,8 @@ public class KVStore {
     public KVMessage relocateServer(KVMessage kvmessage) throws Exception {
         System.out.println("Server not found or crashed, searching and reconnecting");
         logger.info("Server not found or crashed, searching and reconnecting");
+
+        // metadata = KVMessage(StatusType.SERVER_CRASHED,"", "").updateMetadata(this.address);
 
         if (metadata == null) {
             System.out.println("No other server available");

@@ -48,7 +48,7 @@ import shared.Metadata;
 public class ECSClient implements IECSClient {
     // Prevent external libraries from spamming console
     public static Logger logger = Logger.getLogger(ECSClient.class);
-    private static Level logLevel = Level.DEBUG;
+    private static Level logLevel = Level.ERROR;
     private List<Integer> initialJavaPIDs;
 
     private boolean running = false;

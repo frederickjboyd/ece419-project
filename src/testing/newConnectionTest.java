@@ -8,131 +8,99 @@ import org.junit.Test;
 
 import junit.framework.TestCase;
 import ecs.*;
-
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
 import junit.framework.TestCase;
 import shared.communication.KVMessage;
 import shared.communication.IKVMessage.StatusType;
 
 public class newConnectionTest extends TestCase {
-    private KVStore kvClient;
+     
+    public List<KVStore> kvClientList = new ArrayList<KVStore>();
+    // ECS Client
+    private static final String ECSConfigPath = System.getProperty("user.dir") + "/ecs.config";
+    private ECSClient ecs = null;
+    // KVServer
+    private static final int numServers = 3;
+    private static final String cacheStrategy = "FIFO";
+    private static final int cacheSize = 50;
+    private String testHost;
+    private Exception ex;
+    private int testPort;
+    List<ECSNode> ecsNodeList = null;
 
     public void setUp() {
 
-        // CacheStrategy cacheStrategy = CacheStrategy.FIFO;
-        String cacheStrategy = "FIFO";
-
-        int cacheSize = 500;
-        String host;
-        int port;
-        int numServers = 5;
-        String ECSConfigPath = System.getProperty("user.dir") + "/ecs.config";
-
-        List<ECSNode> nodesAdded;
-        ECSClient ecs;
-
-        // List<ECSNode> nodesAdded = new ArrayList<ECSNode>()
-        ecs = new ECSClient(ECSConfigPath);
-        nodesAdded = ecs.addNodes(numServers, cacheStrategy, cacheSize);
         try {
+            System.out.println("Setting newconnection test!");
+            ecs = new ECSClient(ECSConfigPath);
+            ecsNodeList = ecs.addNodes(numServers, cacheStrategy, cacheSize);
+            try {
+                ecs.awaitNodes(numServers, 2000);
+            } catch (Exception e) {
+            }
+            System.out.println("Starting ECS!");
             ecs.start();
         } catch (Exception e) {
-            System.out.println("ECS Performance Test failed on ECSClient init: " + e);
+            ex = e;
+            System.out.println(" Test failed on ECSClient init: " + e);
         }
-
-        host = nodesAdded.get(0).getNodeHost();
-        port = nodesAdded.get(0).getNodePort();
-
-        // kvClient = new KVStore("localhost", 50000);
-        kvClient = new KVStore(host, port);
-        try {
-            kvClient.connect();
-        } catch (Exception e) {
-            System.out.println("not working");
-
-        }
-    }
-
-    public void testMoreNodeAndConnection() {
-        // CacheStrategy cacheStrategy = CacheStrategy.FIFO;
-        String cacheStrategy = "FIFO";
-
-        int cacheSize = 500;
-        String host;
-        int port;
-        int numServers = 5;
-        String ECSConfigPath = System.getProperty("user.dir") + "/ecs.config";
-
-        List<ECSNode> nodesAdded;
-        ECSClient ecs;
-
-        // List<ECSNode> nodesAdded = new ArrayList<ECSNode>()
-        ecs = new ECSClient(ECSConfigPath);
-        nodesAdded = ecs.addNodes(numServers, cacheStrategy, cacheSize);
-        try {
-            ecs.start();
-        } catch (Exception e) {
-            System.out.println("ECS Performance Test failed on ECSClient init: " + e);
-        }
-
-        host = nodesAdded.get(0).getNodeHost();
-        port = nodesAdded.get(0).getNodePort();
-
-        // kvClient = new KVStore("localhost", 50000);
-        kvClient = new KVStore(host, port);
-        try {
-            kvClient.connect();
-        } catch (Exception e) {
-            System.out.println("not working");
-
-        }
-    }
-
-    @Test
-    /**
-     * Check that size of hash ring matches number of possible servers.
-     */
-    public void testtwoNodesSetup() {
-        String cacheStrategy = "FIFO";
-
-        int cacheSize = 500;
-        String host;
-        int port;
-        int numServers = 2;
-        String ECSConfigPath = System.getProperty("user.dir") + "/ecs.config";
-
-        List<ECSNode> nodesAdded;
-        ECSClient ecs;
-        String host2;
-        int port2;
-        ecs = new ECSClient(ECSConfigPath);
-
-        nodesAdded = ecs.addNodes(numServers, cacheStrategy, cacheSize);
-        try {
-            ecs.start();
-        } catch (Exception e) {
-            System.out.println("ECS Performance Test failed on ECSClient init: " + e);
-        }
-        host = nodesAdded.get(0).getNodeHost();
-        port = nodesAdded.get(0).getNodePort();
-        host2 = nodesAdded.get(1).getNodeHost();
-        port2 = nodesAdded.get(1).getNodePort();
-        assertTrue(host2 != host);
+        // Pick a random available server to connect to
+        
 
     }
 
-    @Test
-    /**
-     * Check that each node's placement in the hash ring makes sense.
-     */
-    public void testPut() {
+    public void testM2() {
+        // test 1 node connection
+        for (int i = 0; i < 3; i++) {
+            testHost = ecsNodeList.get(i).getNodeHost();
+            testPort = ecsNodeList.get(i).getNodePort();
+            System.out.println(testHost);
+            System.out.println(testPort);
+
+            // KVStore tempKVStore = new KVStore(hostname, port);
+            kvClientList.add(new KVStore(testHost, testPort));
+        }
+
+        try {
+            kvClientList.get(0).connect();
+            System.out.println(" test connection Test SUCCESS: Clients connected!");
+            kvClientList.get(0).disconnect();
+        } catch (Exception e) {
+            ex = e;
+            System.err.println("test connection Test FAILURE: Client Connection Failed!");
+        }
+        System.out.println(" test single connection Test SUCCESS: Clients connected!");
+
+        // test more node connection
+        for (int i = 0; i < 3; i++) {
+            testHost = ecsNodeList.get(i).getNodeHost();
+            testPort = ecsNodeList.get(i).getNodePort();
+            // KVStore tempKVStore = new KVStore(hostname, port);
+            kvClientList.add(new KVStore(testHost, testPort));
+        }
+
+        try {
+            for (int i = 0; i < 3; i++) {
+                kvClientList.get(i).connect();
+            }
+            System.out.println(" test connection Test SUCCESS: Clients connected!");
+        } catch (Exception e) {
+            ex = e;
+            System.err.println("test connection Test FAILURE: Client Connection Failed!");
+        }
+        System.out.println(" test multi node connection Test SUCCESS: Clients connected!");
+
+        // test put in different client 
         KVMessage r1 = null;
         KVMessage r2 = null;
         KVMessage r3 = null;
         Exception ex = null;
        try {
-            r1 = kvClient.put("1", "3");
-            r2 = kvClient.put("2", "2");
-            r3 = kvClient.put("3", "1");
+            r1 = kvClientList.get(0).put("1", "3");
+            r2 = kvClientList.get(1).put("2", "2");
+            r3 = kvClientList.get(2).put("3", "1");
         } catch (Exception e) {
             ex=e;
         }
@@ -145,18 +113,13 @@ public class newConnectionTest extends TestCase {
         assertNotNull(r2);
         assertNotNull(r3);
 
-    }
+        System.out.println("different server client put Test SUCCESS");
 
-    @Test
-    public void testGet() {
-        KVMessage r1 = null;
-        KVMessage r2 = null;
-        KVMessage r3 = null;
-        Exception ex = null;
+        // test get
         try {
-            r1 = kvClient.get("1");
-            r2 = kvClient.get("2");
-            r3 = kvClient.get("3");
+            r1 = kvClientList.get(0).get("1");
+            r2 = kvClientList.get(1).get("2");
+            r3 = kvClientList.get(2).get("3");
         } catch (Exception e) {
             ex = e;
         }
@@ -168,20 +131,13 @@ public class newConnectionTest extends TestCase {
         assertNotNull(r1);
         assertNotNull(r2);
         assertNotNull(r3);
+        System.out.println("different server client get Test SUCCESS");
 
-    }
-
-    @Test
-    public void testDelete() {
-        KVMessage r1 = null;
-        KVMessage r2 = null;
-        KVMessage r3 = null;
-        Exception ex = null;
-
+        // test delete
         try {
-            r1 = kvClient.put("1", "");
-            r2 = kvClient.put("2", "");
-            r3 = kvClient.put("3", "");
+            r1 = kvClientList.get(0).put("1", "");
+            r2 = kvClientList.get(1).put("2", "");
+            r3 = kvClientList.get(2).put("3", "");
         } catch (Exception e) {
             ex = e;
         }
@@ -193,6 +149,9 @@ public class newConnectionTest extends TestCase {
         assertNotNull(r1);
         assertNotNull(r2);
         assertNotNull(r3);
+        System.out.println("different server client delete Test SUCCESS");
+
+        System.out.println("All new connection test SUCCESS");
 
     }
 

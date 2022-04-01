@@ -15,58 +15,57 @@ import shared.communication.IKVMessage.StatusType;
 import app_kvECS.ECSClient;
 
 public class AdditionalTest extends TestCase {
-
-    // TODO add your test cases, at least 3
+    public List<KVStore> kvClientList;
+    // ECS Client
+    private static final String ECSConfigPath = System.getProperty("user.dir") + "/ecs.config";
+    private ECSClient ecs = null;
+    // KVServer
+    private static final int numServers = 3;
+    private static final String cacheStrategy = "FIFO";
+    private static final int cacheSize = 50;
+    private String testHost;
+    private Exception ex;
+    private int testPort;
     private KVStore kvClient;
     private KVStore kvClient1;
     private KVStore kvClient2;
 
+
     public void setUp() {
-        // CacheStrategy cacheStrategy = CacheStrategy.FIFO
-        String cacheStrategy = "FIFO";
+        List<ECSNode> ecsNodeList = null;
 
-        int cacheSize = 500;
-        String host;
-        int port;
-        int numServers = 5;
-        String ECSConfigPath = System.getProperty("user.dir") + "/ecs.config";
-
-        List<ECSNode> nodesAdded;
-        ECSClient ecs;
-
-        // List<ECSNode> nodesAdded = new ArrayList<ECSNode>()
-        ecs = new ECSClient(ECSConfigPath);
-        nodesAdded = ecs.addNodes(numServers, cacheStrategy, cacheSize);
         try {
+            System.out.println("Setting up ECS performance test!");
+            ecs = new ECSClient(ECSConfigPath);
+            ecsNodeList = ecs.addNodes(numServers, cacheStrategy, cacheSize);
+            try {
+                ecs.awaitNodes(numServers, 2000);
+            } catch (Exception e) {
+            }
+            System.out.println("Starting ECS!");
             ecs.start();
         } catch (Exception e) {
-            System.out.println("ECS Performance Test failed on ECSClient init: " + e);
+            ex = e;
+            System.out.println(" Test failed on ECSClient init: " + e);
         }
-        
-        host = nodesAdded.get(0).getNodeHost();
-        port = nodesAdded.get(0).getNodePort();
+        // Pick a random available server to connect to
+        testHost = ecsNodeList.get(0).getNodeHost();
+        testPort = ecsNodeList.get(0).getNodePort();
 
-        // kvClient = new KVStore("localhost", 50000);
-        // Workaround to fix build errors
-        
-        kvClient = new KVStore(host, port);
+        kvClient = new KVStore(testHost, testPort);
+        kvClient1= new KVStore(testHost, testPort);
+        kvClient2= new KVStore(testHost, testPort);
+
+
         try {
             kvClient.connect();
-        } catch (Exception e) {
-        }
-
-        kvClient1 = new KVStore(host, port);
-        try {
             kvClient1.connect();
-        } catch (Exception e) {
-        }
-
-        kvClient2 = new KVStore(host, port);
-        try {
             kvClient2.connect();
         } catch (Exception e) {
+            ex = e;
         }
-        System.out.println("additional test set up success");
+        System.out.println("test connecting to: " + testHost + ":" + testPort);
+
     }
 
     @Test
@@ -74,6 +73,7 @@ public class AdditionalTest extends TestCase {
         // ** This test mainly test if there exist space in the value the spaces will
         // all be recorded */
 
+        // testPutWithSpaceInMsg
         String key = "foo2";
         String value = "bar     2";
         KVMessage response = null;
@@ -85,7 +85,6 @@ public class AdditionalTest extends TestCase {
         } catch (Exception e) {
             ex = e;
         }
-
         try {
             getResponse = kvClient.get(key);
         } catch (Exception e2) {
@@ -96,17 +95,11 @@ public class AdditionalTest extends TestCase {
         assertTrue(ex == null && getResponse.getValue().equals("bar     2")
                 && (response.getStatus() == StatusType.PUT_SUCCESS || response.getStatus() == StatusType.PUT_UPDATE));
 
-    }
-
-    @Test
-    public void testEmptyKeyAndMsg() {
-        // ** This test mainly test if there exist space in the value the spaces will
-        // all be recorded */
-
-        String key = "";
-        String value = "";
-        KVMessage response = null;
-        Exception ex = null;
+        // testEmptyKeyAndMsg
+        key = "";
+        value = "";
+        response = null;
+        ex = null;
 
         try {
             response = kvClient.put(key, value);
@@ -116,19 +109,14 @@ public class AdditionalTest extends TestCase {
         System.out.println("test testEmptyKeyAndMsg success");
         assertTrue(response.getStatus() == StatusType.DELETE_ERROR);
 
-    }
-
-    @Test
-    public void testPutWithDiffCap() {
-        // ** This test mainly test that the capitalization of key will matter and be
-        // registered as individual query*/
-        String key = "foo";
-        String value = "bar";
+        //testPutWithDiffCap
+        key = "foo";
+        value = "bar";
         String keyCap = "Foo";
         String valueCap = "Bar";
-        KVMessage response = null;
+        response = null;
         KVMessage responseCap = null;
-        Exception ex = null;
+        ex = null;
 
         try {
             response = kvClient.put(key, value);
@@ -141,18 +129,19 @@ public class AdditionalTest extends TestCase {
         assertTrue(ex == null && !response.getValue().equals(responseCap.getValue())
                 && (response.getStatus() == StatusType.PUT_SUCCESS || response.getStatus() == StatusType.PUT_UPDATE));
 
-    }
 
-    @Test
-    public void testMultithreadingPut() {
-        // ** This test checks that multiple clients can send PUT requests together*/
+
+        // testMultithreadingPut
         KVMessage response1 = null;
         KVMessage response2 = null;
-        Exception ex = null;
+        ex = null;
+        String key1 = "newKey";
+        String key2 = "newKeyTwo";
+
 
         try {
-            response1 = kvClient1.put("newKey", "bar");
-            response2 = kvClient2.put("newKeyTwo", "bartwo");
+            response1 = kvClient1.put(key1, "bar");
+            response2 = kvClient2.put(key2, "bartwo");
         } catch (Exception e) {
             ex = e;
         }
@@ -161,44 +150,25 @@ public class AdditionalTest extends TestCase {
         assertTrue(ex == null &&
                 (response1.getStatus() == StatusType.PUT_SUCCESS) &&
                 (response2.getStatus() == StatusType.PUT_SUCCESS));
-    }
 
-    @Test
-    public void testMultithreadingGet() {
-        // ** This test checks that multiple clients can send GET requests together*/
-        String key = "foo";
-        KVMessage response1 = null;
-        KVMessage response2 = null;
-        Exception ex = null;
-
+        //testMultithreadingGet
         try {
-            response1 = kvClient1.put(key, "bar");
-            response2 = kvClient2.put(key, "secondbar");
-        } catch (Exception e) {
-            ex = e;
-        }
-
-        try {
-            response1 = kvClient1.get(key);
-            response2 = kvClient2.get(key);
+            response1 = kvClient1.get(key1);
+            response2 = kvClient2.get(key2);
         } catch (Exception e) {
             ex = e;
         }
 
         System.out.println("test multithreading_get success");
-        assertTrue(
-                ex == null && (response1.getValue().equals("secondbar")) && (response2.getValue().equals("secondbar")));
-    }
+        assertTrue(ex == null && (response1.getValue().equals("bar")) && (response2.getValue().equals("bartwo")));
 
-    @Test
-    public void testMultiThreadingCombined() {
-        //** This test checks that multiple clients can send complex sequences of puts and gets together*/
+        //testMultiThreadingCombined
         KVMessage responsePut = null;
         KVMessage responseUpdate = null;
         KVMessage responseGet = null;
         KVMessage responseDelete = null;
         KVMessage responseGet2 = null;
-        Exception ex = null;
+        ex = null;
 
         try {
             // Put
@@ -211,9 +181,10 @@ public class AdditionalTest extends TestCase {
             responseDelete = kvClient2.put("testCombined", "");
             // Get empty
             responseGet2 = kvClient1.get("testCombined");
-        } catch (Exception e) {
-            ex = e;
-        }
+            } catch (Exception e) {
+                ex = e;
+            }
+
         System.out.println("testMultithreadingCombined success");
         assertTrue(ex == null && 
         (responsePut.getStatus() == StatusType.PUT_SUCCESS) &&
@@ -221,6 +192,8 @@ public class AdditionalTest extends TestCase {
         (responseGet.getValue().equals("hellotwo")) && 
         (responseDelete.getStatus() == StatusType.DELETE_SUCCESS) &&
         (responseGet2.getStatus() == StatusType.GET_ERROR));
+        System.out.println("All additional  test SUCCESS");
+        
     }
 
 }

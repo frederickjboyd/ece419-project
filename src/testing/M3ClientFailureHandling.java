@@ -10,7 +10,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
-public class ConnectionTest extends TestCase {
+public class M3ClientFailureHandling extends TestCase {
     public List<KVStore> kvClientList;
     // ECS Client
     private static final String ECSConfigPath = System.getProperty("user.dir") + "/ecs.config";
@@ -41,66 +41,26 @@ public class ConnectionTest extends TestCase {
             System.out.println(" Test failed on ECSClient init: " + e);
         }
         // Pick a random available server to connect to
-        testHost = ecsNodeList.get(0).getNodeHost();
-        testPort = ecsNodeList.get(0).getNodePort();
-
-        System.out.println("test connecting to: " + testHost + ":" + testPort);
-
-    }
-
-    public void testAllConnection() {
-        // Connect all KVClients
         kvClientList = new ArrayList<KVStore>();
 
-        for (int i = 0; i < 1; i++) {
+        for (int i = 0; i < 3; i++) {
+            testHost = ecsNodeList.get(i).getNodeHost();
+            testPort = ecsNodeList.get(i).getNodePort();
             // KVStore tempKVStore = new KVStore(hostname, port);
             kvClientList.add(new KVStore(testHost, testPort));
-        }
-
-        try {
-            for (int i = 0; i < 1; i++) {
+            try {
                 kvClientList.get(i).connect();
+            } catch (Exception e) {
+                ex = e;
+                System.err.println("test connection Test FAILURE: Client Connection Failed!");
             }
-            System.out.println(" test connection Test SUCCESS: Clients connected!");
-
-            for (int i = 0; i < 1; i++) {
-                kvClientList.get(i).disconnect();
-            }
-        } catch (Exception e) {
-            ex = e;
-            System.err.println("test connection Test FAILURE: Client Connection Failed!");
+            System.out.println("test connecting to: " + testHost + ":" + testPort);
         }
-        assertNull(ex);
-
-        // unknownhost 
-        Exception ex = null;
-        KVStore kvClient = new KVStore("unknown", testPort);
-
-        try {
-            kvClient.connect();
-        } catch (Exception e) {
-            ex = e;
-        }
-
-        assertTrue(ex instanceof UnknownHostException);
-        System.out.println(" test unknown host SUCCESS: Unknown host error detected!");
-
-        // illegal port test
-
-        ex = null;
-        kvClient = new KVStore(testHost, 123456789);
-
-        try {
-            kvClient.connect();
-        } catch (Exception e) {
-            ex = e;
-        }
-        assertTrue(ex instanceof IllegalArgumentException);
-        
-        System.out.println(" test unknown port SUCCESS: Unknown port error detected!");
-        System.out.println("All connection test SUCCESS");
 
     }
 
-
+    public void testFailureHandlingSuccess() {
+        // Connect all KVClients
+        int i;
+    }
 }

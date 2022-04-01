@@ -46,10 +46,10 @@ public class KVStore {
             logger.error("Unable to parse argument <port>", nfe);
             throw new NumberFormatException();
         } catch (UnknownHostException e) {
-            logger.error("Unknown Host!", e);
+            logger.error("Unknown Host!");
             throw new UnknownHostException();
         } catch (IllegalArgumentException e) {
-            logger.error("Unknown Host!", e);
+            logger.error("Illegal Argument!");
             throw new IllegalArgumentException();
         } catch (IOException e) {
             logger.error("Could not establish connection, check server!", e);
@@ -58,6 +58,7 @@ public class KVStore {
             logger.error("Other exception, maybe check server", e);
             throw new Exception();
         }
+        return;
     }
 
     public void disconnect() {

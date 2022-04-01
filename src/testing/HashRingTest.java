@@ -7,13 +7,11 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
-import java.util.Map;
 import java.util.Random;
 import java.util.Set;
 import java.util.TreeSet;
 
 import org.junit.Test;
-import app_kvECS.ECSClient;
 
 import app_kvServer.IKVServer.CacheStrategy;
 import junit.framework.TestCase;
@@ -22,6 +20,7 @@ import ecs.HashRing;
 import ecs.ECSNode.NodeStatus;
 
 public class HashRingTest extends TestCase {
+
     private HashRing hashRingClass = new HashRing();
     private static final String CONFIG_PATH = "ecs.config";
     private HashMap<String, NodeStatus> serverStatusInfo = new HashMap<String, NodeStatus>();
@@ -37,6 +36,8 @@ public class HashRingTest extends TestCase {
                 String[] config = l.split("\\s+", 3);
                 serverStatusInfo.put(String.format("%s:%s:%s", config[0], config[1], config[2]), NodeStatus.OFFLINE);
             }
+
+            reader.close();
         } catch (Exception e) {
             e.printStackTrace();
         }
@@ -46,7 +47,19 @@ public class HashRingTest extends TestCase {
         List<String> serverInfoList = new ArrayList<String>(serverInfoSet);
 
         numServersToAdd = serverStatusInfo.size() - 1;
-        hashRingClass.initHashRing(serverInfoList.subList(0, numServersToAdd), CacheStrategy.None, 0);
+
+        for (int i = 0; i < numServersToAdd; i++) {
+            if (hashRingClass.getHashRing().isEmpty()) {
+                List<String> newServerInfoList = new ArrayList<String>();
+                newServerInfoList.add(serverInfoList.get(0));
+                // Creates and adds node to hash ring
+                hashRingClass.initHashRing(newServerInfoList, CacheStrategy.None, 0);
+            } else {
+                String newServerInfo = serverInfoList.get(i);
+                ECSNode newNode = hashRingClass.createECSNode(newServerInfo, CacheStrategy.None, 0);
+                hashRingClass.addNode(newNode);
+            }
+        }
     }
 
     @Test
@@ -96,13 +109,18 @@ public class HashRingTest extends TestCase {
                 System.out.println(String.format("prevNodeID: %d", prevNodeID));
                 System.out.println(String.format("currNodeID: %d", currNodeID));
                 System.out.println(String.format("nextNodeID: %d", nextNodeID));
+                System.out.println(String.format("isPrevNodeSmaller: %d", isPrevNodeSmaller));
+                System.out.println(String.format("isNextNodeLarger: %d", isNextNodeLarger));
+                System.out.println(String.format("accum: %d", accum));
+                System.out.println(String.format("hashRing size: %d", hashRing.size()));
                 break;
+
             }
 
             accum += 1;
-        }
 
-        assertTrue(orderValid == true);
+            assertTrue(orderValid == true);
+        }
     }
 
     @Test
@@ -189,7 +207,6 @@ public class HashRingTest extends TestCase {
     public void testNodeAdd() {
         // Determine possible nodes to add
         Set<String> allServerInfo = serverStatusInfo.keySet();
-        List<BigInteger> sortedNodeIDs = hashRingClass.getSortedNodeIDs();
         List<String> serversAvailable = new ArrayList<String>();
         HashMap<BigInteger, ECSNode> hashRing = hashRingClass.getHashRing();
 

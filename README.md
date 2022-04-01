@@ -4,20 +4,25 @@
 UofT Distributed Systems Project
 
 **Test Run**
-To start ECS: `java -jar m2-ecs.jar ecs.config`
 
-Then: `addnode FIFO 50`
+To start ECS: `java -jar m3-ecs.jar ecs.config`
+
+Then select number of servers to add, cache type, cache size:
+`addnodes 3 FIFO 50`
 
 Then: `start`
 
-To start client: `java -jar m2-client.jar`
+To start client: `java -jar m3-client.jar`
 
-Then: `connect localhost <serverPort>`
+Then if on local machine: `connect localhost <serverPort>`
 
+If connecting from a remote machine: `connect <serverIP> <serverPort>`
 
 **Shutdown Procedure (temp)**
-ECS: `shutdown`
+
+ECS: 
+`shutdown`
+`cleanall`
+`quit`
 
 KVClient: `quit`
-
-ECS: `quit`

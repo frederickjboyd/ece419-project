@@ -242,7 +242,7 @@ public class CrashTestDetection extends TestCase {
 
     /** Run performance test **/
     @Test
-    public void testCrashDetection() {
+    public void testServerCrash() {
         setUpInternal();
         crashLoopHelper(1);
         // crashLoopHelper(2);

@@ -83,9 +83,9 @@ public class KVStore {
         // current implementation for m3
         try{
             kvmessageReceived = kvCommunication.receiveMessage();
-            if (metadata == null) {
-                metadata = kvmessageReceived.updateMetadata(this.address);
-            }
+            // if (metadata == null) {
+            //     metadata = kvmessageReceived.updateMetadata(this.address);
+            // }
         } catch (Exception e){
             kvmessageReceived = relocateServer(kvmessage);
 		}
@@ -118,9 +118,9 @@ public class KVStore {
 
         try{
             kvmessageReceived = kvCommunication.receiveMessage();
-            if (metadata == null) {
-                metadata = kvmessageReceived.updateMetadata(this.address);
-            }
+            // if (metadata == null) {
+            //     metadata = kvmessageReceived.updateMetadata(this.address);
+            // }
         } catch (Exception e){
             kvmessageReceived = relocateServer(kvmessage);
         }
@@ -153,9 +153,6 @@ public class KVStore {
         if (kvmessageReceived.getStatus() == KVMessage.StatusType.SERVER_NOT_RESPONSIBLE) {
             // if the server is not the supposed to be server then request metadata update
             metadata = kvmessageReceived.updateMetadata(this.address);
-            logger.info("starting");
-            logger.info(this.address);
-            logger.info(metadata);
             BigInteger hexkeyInt = null;
 
             try {
@@ -164,8 +161,8 @@ public class KVStore {
                 logger.error("Error in generating MD5 hash!");
             }
 
-            String originServerAddress = this.address;
-            int originServerPort = this.port;
+            String originServerAddress = address;
+            int originServerPort = port;
             int i;
 
             for (i = 0; i < metadata.size(); i++) {
@@ -183,16 +180,18 @@ public class KVStore {
                     disconnect();
                     address = obj.getHost();
                     port = obj.getPort();
+
                     logger.info("10000000000000");
                     logger.info(address);
 
                     try {
                         logger.info("1234567654345654");
                         logger.info(this.address);
+                        connect();
 
                         this.address = address;
                         this.port = port;
-                        connect();
+
                         logger.info(this.address);
 
                         String infoMsg = String.format("Metadata updated and switched to server %s and port:%s",
@@ -201,8 +200,8 @@ public class KVStore {
                         logger.info(infoMsg);
 
                     } catch (Exception e) {
-                        this.address = originServerAddress;
-                        this.port = originServerPort;
+                        address = originServerAddress;
+                        port = originServerPort;
 
                         try {
                             connect();

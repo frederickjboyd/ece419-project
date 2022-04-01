@@ -582,6 +582,8 @@ public class KVServer implements IKVServer, Runnable {
     /** Server initialiation helper. Initializes socket on given port. */
     private boolean initializeServer() {
         logger.info("Initialize server ...");
+        logger.info(serverSocket.getLocalPort());
+        
         try {
             serverSocket = new ServerSocket(port);
             logger.info("Server listening on port: "
@@ -589,6 +591,8 @@ public class KVServer implements IKVServer, Runnable {
             return true;
 
         } catch (IOException e) {
+        logger.info(port);
+
             logger.error("Error! Cannot open server socket:");
             if (e instanceof BindException) {
                 logger.error("Port " + port + " is already bound!");

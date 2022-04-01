@@ -35,6 +35,7 @@ public class KVCommunicationClient {
     public KVCommunicationClient(Socket socket) {
         DebugHelper.logFuncEnter(logger);
         this.socket = socket;
+        logger.info("hi");
 
         try {
             this.in = socket.getInputStream();

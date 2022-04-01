@@ -83,6 +83,9 @@ public class KVStore {
         // current implementation for m3
         try{
             kvmessageReceived = kvCommunication.receiveMessage();
+            // if (metadata == null) {
+            //     metadata = kvmessageReceived.updateMetadata(this.address);
+            // }
         } catch (Exception e){
             kvmessageReceived = relocateServer(kvmessage);
 		}
@@ -115,6 +118,9 @@ public class KVStore {
 
         try{
             kvmessageReceived = kvCommunication.receiveMessage();
+            // if (metadata == null) {
+            //     metadata = kvmessageReceived.updateMetadata(this.address);
+            // }
         } catch (Exception e){
             kvmessageReceived = relocateServer(kvmessage);
         }
@@ -175,10 +181,19 @@ public class KVStore {
                     address = obj.getHost();
                     port = obj.getPort();
 
+                    logger.info("10000000000000");
+                    logger.info(address);
+
                     try {
+                        logger.info("1234567654345654");
+                        logger.info(this.address);
                         connect();
+
                         this.address = address;
                         this.port = port;
+
+                        logger.info(this.address);
+
                         String infoMsg = String.format("Metadata updated and switched to server %s and port:%s",
                                 address, port);
                         System.out.println(infoMsg);

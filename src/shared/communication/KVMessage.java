@@ -264,6 +264,13 @@ public class KVMessage implements IKVMessage, Serializable {
             if (obj.getString("host").equals("localhost")) {
                 temp = new Metadata(serverIP, obj.getInt("port"),obj.getBigInteger("hashStart"), obj.getBigInteger("hashStop"));
             } else {
+                logger.info("is not localhost");
+                logger.info(obj.getString("host").equals("localhost"));
+
+                logger.info(String.valueOf(obj.getString("host")).equals("localhost"));
+
+
+
                 temp = new Metadata(obj.getString("host"), obj.getInt("port"),obj.getBigInteger("hashStart"), obj.getBigInteger("hashStop"));
             }
             // Metadata temp = new Metadata(obj.getString("host"), obj.getInt("port"),obj.getBigInteger("hashStart"), obj.getBigInteger("hashStop"));

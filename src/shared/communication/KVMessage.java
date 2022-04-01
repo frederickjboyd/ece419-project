@@ -261,9 +261,19 @@ public class KVMessage implements IKVMessage, Serializable {
         while (keys.hasNext()) {
             String key = keys.next();
             JSONObject obj = (JSONObject) metadata_jo.get(key);
-            if (obj.getString("host") == "localhost") {
+            if (obj.getString("host").equals("localhost")) {
+                logger.info("is localhost");
+
+                logger.info(obj.getString("host") );
                 temp = new Metadata(serverIP, obj.getInt("port"),obj.getBigInteger("hashStart"), obj.getBigInteger("hashStop"));
             } else {
+                logger.info("is not localhost");
+                logger.info(obj.getString("host").equals("localhost"));
+
+                logger.info(String.valueOf(obj.getString("host")).equals("localhost"));
+
+
+
                 temp = new Metadata(obj.getString("host"), obj.getInt("port"),obj.getBigInteger("hashStart"), obj.getBigInteger("hashStop"));
             }
             // Metadata temp = new Metadata(obj.getString("host"), obj.getInt("port"),obj.getBigInteger("hashStart"), obj.getBigInteger("hashStop"));

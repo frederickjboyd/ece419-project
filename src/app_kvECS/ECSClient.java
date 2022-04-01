@@ -65,6 +65,8 @@ public class ECSClient implements IECSClient {
     private static final String SERVER_JAR = "m3-server.jar";
     private static final int ZK_PORT = 2181;
     private static final String ZK_HOST = "localhost";
+    // private static final String ZK_HOST = "0.0.0.0";
+
     private static final int ZK_TIMEOUT = 2000;
     private Thread zkServer;
     private ZooKeeperConnectedWatcher zkWatcher;

@@ -33,6 +33,7 @@ public class AllTests {
         // clientSuite.addTestSuite(newConnectionTest.class);           // worked
         clientSuite.addTestSuite(M3ClientFailureHandling.class);
 
+
         return clientSuite;
     }
 }

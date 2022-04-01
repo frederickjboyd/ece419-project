@@ -54,7 +54,7 @@ public class ECSClient implements IECSClient {
     private boolean running = false;
     private boolean zkServerRunning = false;
     private static final String PROMPT = "ECS> ";
-    private HashMap<String, NodeStatus> serverStatusInfo = new HashMap<String, NodeStatus>();
+    public HashMap<String, NodeStatus> serverStatusInfo = new HashMap<String, NodeStatus>();
     private HashRing hashRing;
     private List<String> unavailableServers = new ArrayList<String>(); // Any servers that are not OFFLINE
     private HashMap<String, Process> runningServers = new HashMap<String, Process>();
@@ -315,7 +315,7 @@ public class ECSClient implements IECSClient {
         return result;
     }
 
-    private void awaitTime(int timeout) {
+    public void awaitTime(int timeout) {
         DebugHelper.logFuncEnter(logger);
         CountDownLatch latch = new CountDownLatch(timeout);
 

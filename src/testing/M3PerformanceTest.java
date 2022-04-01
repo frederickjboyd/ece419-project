@@ -26,11 +26,11 @@ public class M3PerformanceTest extends TestCase {
     private static final int cacheSize = 50;
 
     public void setUp(){
-        System.out.println("Begin performance test.....");
+        System.out.println("Begin performance test (single client).....");
     }
 
     public void tearDown(){
-        System.out.println("End performance test.....");
+        System.out.println("End performance test (single client).....");
     }
 
     public void setUpInternal() {
@@ -131,7 +131,7 @@ public class M3PerformanceTest extends TestCase {
         String key = null;
         KVMessage response = null;
         Exception ex = null;
-        int loops = 5; // normally 150
+        int loops = 20; // normally 150
         String output = "";
         double totalBytes = 0;
 
@@ -149,7 +149,7 @@ public class M3PerformanceTest extends TestCase {
             try {
                 for (int j = 0; j < 5; j++) {
                     if (j == 4) {
-                        kvClientList.get(0).get(key).getValue();
+                        output = kvClientList.get(0).get(key).getValue();
                     } else {
                         kvClientList.get(0).put(key, value);
                     }

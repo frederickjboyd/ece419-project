@@ -315,7 +315,7 @@ public class ECSClient implements IECSClient {
         return result;
     }
 
-    private void awaitTime(int timeout) {
+    public void awaitTime(int timeout) {
         DebugHelper.logFuncEnter(logger);
         CountDownLatch latch = new CountDownLatch(timeout);
 

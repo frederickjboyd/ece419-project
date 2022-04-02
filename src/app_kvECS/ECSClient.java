@@ -169,6 +169,10 @@ public class ECSClient implements IECSClient {
         return nodesAdded.get(0);
     }
 
+    public List<ECSNode> addNodes(int count, String cacheStrategyStr, int cacheSize) {
+        return addNodes(count, cacheStrategyStr, cacheSize, false);
+    }
+
     @Override
     public List<ECSNode> addNodes(int count, String cacheStrategyStr, int cacheSize, boolean isFailure) {
         DebugHelper.logFuncEnter(logger);

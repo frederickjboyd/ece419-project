@@ -41,7 +41,7 @@ public class M3ClientFailureHandling extends TestCase {
                 System.out.println(initJavaPIDs.get(j));
             }
 
-            ecsNodeList = ecs.addNodes(numServers, cacheStrategy, cacheSize, false);
+            ecsNodeList = ecs.addNodes(numServers, cacheStrategy, cacheSize);
             try {
                 ecs.awaitNodes(numServers, 2000);
             } catch (Exception e) {

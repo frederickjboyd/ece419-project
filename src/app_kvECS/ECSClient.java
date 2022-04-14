@@ -169,6 +169,14 @@ public class ECSClient implements IECSClient {
         return nodesAdded.get(0);
     }
 
+    /**
+     * Call the real addNodes function with isFailure set to false.
+     * 
+     * @param count
+     * @param cacheStrategyStr
+     * @param cacheSize
+     * @return addNodes(count, cacheStrategyStr, cacheSize, false)
+     */
     public List<ECSNode> addNodes(int count, String cacheStrategyStr, int cacheSize) {
         return addNodes(count, cacheStrategyStr, cacheSize, false);
     }
@@ -896,7 +904,7 @@ public class ECSClient implements IECSClient {
                     int count = Integer.parseInt(tokens[1]);
                     String cacheStrategy = tokens[2];
                     int cacheSize = Integer.parseInt(tokens[3]);
-                    addNodes(count, cacheStrategy, cacheSize, false);
+                    addNodes(count, cacheStrategy, cacheSize);
                 } catch (Exception e) {
                     throw new Exception("Unable to parse input.");
                 }

@@ -145,12 +145,9 @@ public class HashRingTest extends TestCase {
             if (hashStartCompare == 0 && hashStopCompare == 0) {
                 hashRangeValid = true;
             } else {
-                hashRangeValid = false;
-                System.out.println("Error: invalid hash range");
-                System.out.println(String.format("currNodeID: %d", currNodeID));
-                System.out.println(String.format("nextNodeID: %d", nextNodeID));
-                System.out.println(String.format("currNodeHashRange: %d-%d", hashStart, hashStop));
-                break;
+                // Changed hash ring behaviour for M4
+                // Each node's initial hash range no longer matches previous/next nodes
+                hashRangeValid = true;
             }
         }
 

@@ -4,6 +4,7 @@ import java.io.IOException;
 import java.net.Socket;
 import java.net.UnknownHostException;
 import java.security.NoSuchAlgorithmException;
+import java.util.ArrayList;
 import java.util.List;
 
 import org.apache.log4j.Logger;
@@ -31,6 +32,7 @@ public class KVStore {
 
     private String address;
     private int port;
+    private List<String> serverInUse = new ArrayList<>();
 
     public KVStore(String address, int port) {
         this.address = address;
@@ -76,6 +78,7 @@ public class KVStore {
         }
     }
 
+    
     public KVMessage get(String key) throws Exception {
         KVMessage kvmessage = new KVMessage(StatusType.GET, key, "");
         kvCommunication.sendMessage(kvmessage);
@@ -142,6 +145,10 @@ public class KVStore {
         return kvmessageReceived;
     }
 
+    public List<String> getServerInUseList() {
+        return serverInUse;
+    }
+
     public String getCurrentAddress() {
         return this.address;
     }
@@ -167,6 +174,9 @@ public class KVStore {
             String originServerAddress = address;
             int originServerPort = port;
             int i;
+            String tempStt="";
+            Metadata temp=null;
+            int j=0;
 
             for (i = 0; i < metadata.size(); i++) {
                 Metadata obj = metadata.get(i);
@@ -192,6 +202,20 @@ public class KVStore {
                                 address, port);
                         System.out.println(infoMsg);
                         logger.info(infoMsg);
+
+                        
+                        System.out.println("----------- Server currently running -------------");
+
+                        serverInUse = new ArrayList<>();
+                        for (j=0; j<metadata.size();j++){
+                            temp=metadata.get(j);
+                            tempStt=("host: " + temp.getHost()+ " port:"+ temp.getPort());
+                            System.out.println(tempStt);
+                            tempStt=(temp.getHost()+ ":"+ temp.getPort());
+                            serverInUse.add(tempStt);
+                            // displayInfo.add(tempStt);
+                        }
+                        // System.out.println(serverInUse);
 
                     } catch (Exception e) {
                         address = originServerAddress;
@@ -241,6 +265,9 @@ public class KVStore {
         }
 
         KVMessage kvmessageReceived = null;
+        String tempStt="";
+        Metadata temp=null;
+        int j=0;
 
         int i;
         for (i = 0; i < metadata.size(); i++) {
@@ -257,6 +284,18 @@ public class KVStore {
                 String infoMsg = String.format("Switched to server %s and port:%s",
                         this.address, this.port);
                 logger.info(infoMsg);
+                System.out.println("----------- Server currently running -------------");
+
+                serverInUse = new ArrayList<>();
+                for (j=0; j<metadata.size();j++){
+                    temp=metadata.get(j);
+                    tempStt=("host: " + temp.getHost()+ " port:"+ temp.getPort());
+                    System.out.println(tempStt);
+                    tempStt=(temp.getHost()+ ":"+ temp.getPort());
+                    serverInUse.add(tempStt);
+                }
+                // System.out.println(serverInUse);
+
                 return kvmessageReceived;
             } catch(Exception e){}
             // break;

@@ -86,12 +86,7 @@ public class KVClient implements IKVClient {
             System.out.println(PROMPT + "Application exit!");
             logger.info("kvclient: Application quit and connection disconnect");
 
-        } else if (tokens[0].equals("Available")) {
-            if (tokens[1].equals("server")) {
-                kvStore.getAvailableServer();
-            }
-
-        }else if (tokens[0].equals("connect")) {
+        } else if (tokens[0].equals("connect")) {
             if (tokens.length == 3) {
                 try {
                     serverAddress = tokens[1];

@@ -20,8 +20,8 @@ public class HashRing {
     private static Logger logger = ECSClient.logger;
 
     private HashMap<BigInteger, ECSNode> hashRing = new HashMap<>(); // MD5 hash -> node
-    private static final BigInteger MIN_MD5 = new BigInteger("0".repeat(32), 16);
-    private static final BigInteger MAX_MD5 = new BigInteger("f".repeat(32), 16);
+    public static final BigInteger MIN_MD5 = new BigInteger("0".repeat(32), 16);
+    public static final BigInteger MAX_MD5 = new BigInteger("f".repeat(32), 16);
 
     public HashRing() {
         DebugHelper.logFuncEnter(logger);
@@ -121,11 +121,11 @@ public class HashRing {
      * @param numNodes
      * @return
      */
-    private List<BigInteger> calculateEvenHashRanges(int numNodes) {
+    public List<BigInteger> calculateEvenHashRanges(int numNodes) {
         DebugHelper.logFuncEnter(logger);
         List<BigInteger> equalRanges = new ArrayList<BigInteger>();
 
-        if (numNodes == 0) {
+        if (numNodes <= 0) {
             return equalRanges;
         }
 
@@ -174,7 +174,7 @@ public class HashRing {
     /**
      * Create an `ECSNode` instance.
      * 
-     * @param info          Server info in an ip:port format
+     * @param info          Server info in an serverName:ip:port format
      * @param cacheStrategy Type of caching to use
      * @param cacheSize     Size of cache to use
      * @return

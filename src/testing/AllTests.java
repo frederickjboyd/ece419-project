@@ -27,6 +27,7 @@ public class AllTests {
         clientSuite.addTestSuite(MessageTest.class); // worked
         // clientSuite.addTestSuite(AdditionalTest.class); // worked
         clientSuite.addTestSuite(HashRingTest.class); // worked
+        clientSuite.addTestSuite(HashRingEvenTest.class);
 
         // Sequential consistency test
         //clientSuite.addTestSuite(M4ConsistencyTest.class);

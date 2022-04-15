@@ -15,6 +15,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
+import java.util.concurrent.TimeUnit;
 
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
@@ -98,6 +99,12 @@ public class KVServer implements IKVServer, Runnable {
     private String zooPathRootNext = ECSClient.ZK_ROOT_PATH;
     private String zooPathServerPrev;
 	private String zooPathServerNext;
+
+
+    // Milestone 4 Modifications
+    // For sequential consistency - keep track of how many confirmation messages we need
+    private int replicaConfirmationWaitCount = 0;
+
 
     /**
      * M1: Start KV Server at given port. Server NOT distributed.
@@ -861,6 +868,17 @@ public class KVServer implements IKVServer, Runnable {
         else {
             logger.info("Single entry found...replicating!");
 
+            if (allMetadata.size() == 2){
+                // Wait for prev server to confirm
+                replicaConfirmationWaitCount = 1;
+            }
+            else if (allMetadata.size() >= 3){
+                // Wait for prev and next server to confirm
+                replicaConfirmationWaitCount = 2;
+            }
+
+            logger.info("Now waiting on: " + Integer.toString(replicaConfirmationWaitCount) + " servers to confirm replicate.");
+
             // If there are at least 2 servers, send to prev
             if (allMetadata.size() >= 2){
                 // Get the prev node
@@ -881,6 +899,14 @@ public class KVServer implements IKVServer, Runnable {
                 } catch (InterruptedException | KeeperException e) {
                     logger.error("Failed to replicate single entry to prev: ", e);
                 }
+            }
+
+            // Wait before sending next
+            CountDownLatch latch = new CountDownLatch(1000);
+            try {
+                latch.await(1000, TimeUnit.MILLISECONDS);
+            } catch (Exception e) {
+                logger.error("Error during await");
             }
 
             // If there are at least 3 servers, send to next
@@ -904,9 +930,10 @@ public class KVServer implements IKVServer, Runnable {
                     logger.error("Failed to replicate single entry to next: ", e);
                 }
             }
+
             // TODO - check if we need to wait for confirmation that replication
             // is complete, before unlocking
-            unLockWrite();
+            // unLockWrite();
         }
     }
 
@@ -943,6 +970,17 @@ public class KVServer implements IKVServer, Runnable {
         else {
             logger.info("Some reachable entries found...replicating!");
 
+            if (allMetadata.size() == 2){
+                // Wait for prev server to confirm
+                replicaConfirmationWaitCount = 1;
+            }
+            else if (allMetadata.size() >= 3){
+                // Wait for prev and next server to confirm
+                replicaConfirmationWaitCount = 2;
+            }
+
+            logger.info("Now waiting on: " + Integer.toString(replicaConfirmationWaitCount) + " servers to confirm replicate.");
+             
             // If there are at least 2 servers, send to prev
             if (allMetadata.size() >= 2){
                 // Get the prev node
@@ -962,6 +1000,14 @@ public class KVServer implements IKVServer, Runnable {
                 } catch (InterruptedException | KeeperException e) {
                     logger.error("Failed to replicate to prev: ", e);
                 }
+            }
+
+            // Wait before sending next
+            CountDownLatch latch = new CountDownLatch(1000);
+            try {
+                latch.await(1000, TimeUnit.MILLISECONDS);
+            } catch (Exception e) {
+                logger.error("Error during await");
             }
 
             // If there are at least 3 servers, send to next
@@ -986,6 +1032,25 @@ public class KVServer implements IKVServer, Runnable {
             }
             // TODO - check if we need to wait for confirmation that replication
             // is complete, before unlocking
+            //unLockWrite();
+        }
+    }
+
+    /**
+     * Target server responded with a confirmation that replicate is done
+     * Now we can permit writes/reads on the coordinator
+     * @param adminMessageString Incoming admin message string
+     */
+    public void confirmReplicate(String adminMessageString) {
+        logger.info("Outgoing replication completed! Received 1 acknowledgement!");
+        // Check how many servers we are waiting on
+        replicaConfirmationWaitCount -= 1;
+
+        logger.info(Integer.toString(replicaConfirmationWaitCount) + " servers remaining in replica confirm wait count.");
+
+        // Release the write lock since data is now up to date across the board
+        if (replicaConfirmationWaitCount == 0){
+            logger.info("******* RELEASE WRITE LOCK (all replicate confirms received)!");
             unLockWrite();
         }
     }
@@ -1179,18 +1244,18 @@ public class KVServer implements IKVServer, Runnable {
                 }
             }
         }
-        // // Send confirmation message (data transfer complete) back to sender server
-        // String originServerName = incomingMessage.getSendingServer();
-        // logger.info("Received and finished an incoming data transfer from: " + originServerName);
+        // Send confirmation message (replication complete) back to sender server
+        String originServerName = incomingMessage.getSendingServer();
+        logger.info("Received and finished an incoming replica from: " + originServerName);
 
-        // try {
-        //     // Send admin message to sender server
-        //     // Message type, metadata, data, to_server, from_server
-        //     sendMessage(MessageType.TRANSFER_DATA_COMPLETE, null, null, originServerName, zooPathServer);
-        //     logger.info("Sent a TRANSFER_DATA_COMPLETE to: " + originServerName + " from " + zooPathServer);
-        // } catch (InterruptedException | KeeperException e) {
-        //     logger.error("Failed to send TRANSFER_DATA_COMPLETE admin message to sender server: ", e);
-        // }
+        try {
+            // Send admin message to sender server
+            // Message type, metadata, data, to_server, from_server
+            sendMessage(MessageType.REPLICATE_COMPLETE, null, null, originServerName, zooPathServer);
+            logger.info("Sent a REPLICATE_COMPLETE to: " + originServerName + " from " + zooPathServer);
+        } catch (InterruptedException | KeeperException e) {
+            logger.error("Failed to send REPLICATE_COMPLETE admin message to sender server: ", e);
+        }
         // Release write lock
         unLockWrite();
     }
@@ -1269,7 +1334,7 @@ public class KVServer implements IKVServer, Runnable {
                 logger.info("Got admin message TRANSFER_DATA (receiving an incoming data transfer)!");
                 processDataTransfer(adminMessageString);
             } else if (incomingMessageType == MessageType.TRANSFER_DATA_COMPLETE) {
-                // Handle incoming metadata transfer from another server
+                // Incoming confirmation, data transfer complete on another server
                 logger.info("Got admin message TRANSFER_DATA_COMPLETE (data transfer completed)!");
                 confirmDataTransfer(adminMessageString);
             } else if (incomingMessageType == MessageType.UPDATE) {
@@ -1285,6 +1350,10 @@ public class KVServer implements IKVServer, Runnable {
                 // Receieve replicant KV pairs, save to disk
                 logger.info("Got admin message REPLICATE_DATA (receiving incoming replica(s)!)");
                 processReplicas(adminMessageString);
+            } else if (incomingMessageType == MessageType.REPLICATE_COMPLETE) {
+                // Incoming confirmation, replicate complete on another server
+                logger.info("Got admin message REPLICATE_COMPLETE (data transfer completed)!");
+                confirmReplicate(adminMessageString);
             }
             // else if (incomingMessageType == MessageType.LOCKWRITE){
             // lockWrite();

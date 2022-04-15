@@ -115,7 +115,6 @@ public class ECSNode {
      * @param newNextNodeID
      */
     public void updateNodeIfBefore(BigInteger newNextNodeID) {
-        this.hashRange[1] = newNextNodeID;
         this.nextNodeID = newNextNodeID;
     }
 

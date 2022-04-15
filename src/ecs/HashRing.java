@@ -10,7 +10,6 @@ import shared.Metadata;
 import java.math.BigInteger;
 import java.security.MessageDigest;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
@@ -21,6 +20,8 @@ public class HashRing {
     private static Logger logger = ECSClient.logger;
 
     private HashMap<BigInteger, ECSNode> hashRing = new HashMap<>(); // MD5 hash -> node
+    public static final BigInteger MIN_MD5 = new BigInteger("0".repeat(32), 16);
+    public static final BigInteger MAX_MD5 = new BigInteger("f".repeat(32), 16);
 
     public HashRing() {
         DebugHelper.logFuncEnter(logger);
@@ -51,7 +52,7 @@ public class HashRing {
 
         // Calculate hash range for each node
         for (int i = 0; i < hashRingSize; i++) {
-            setNodeHashRange(i, nodeIDsList, hashRingSize);
+            setNodeHashRangeEven(i, nodeIDsList, hashRingSize);
         }
 
         DebugHelper.logFuncExit(logger);
@@ -61,8 +62,8 @@ public class HashRing {
 
     /**
      * Given where a new node is to be inserted into the hash ring, calculate and
-     * set the hash ranges of the node being added. Also update the hash range of
-     * the next node.
+     * set the hash ranges of the node being added. Also sets previous/next nodes
+     * and updates the hash ranges of nodes.
      * 
      * @param currNodeIdx  Index of where the new node is to be added to the hash
      *                     ring
@@ -72,49 +73,108 @@ public class HashRing {
      * @param hashRingSize Size of the hash ring if the new node were to be
      *                     successfully added
      */
-    private void setNodeHashRange(int currNodeIdx, List<BigInteger> nodeIDsList, int hashRingSize) {
+    private void setNodeHashRangeEven(int currNodeIdx, List<BigInteger> nodeIDsList, int hashRingSize) {
         DebugHelper.logFuncEnter(logger);
         logger.debug(String.format("currNodeIdx: %d", currNodeIdx));
         logger.debug(String.format("hashRingSize: %d", hashRingSize));
         BigInteger currNodeID = nodeIDsList.get(currNodeIdx);
         logger.debug(String.format("currNodeID: %x", currNodeID));
 
-        // Calculate hash range
+        // Set prev/next nodes
         int prevNodeIdx = (currNodeIdx == 0) ? hashRingSize - 1 : currNodeIdx - 1;
         int nextNodeIdx = (currNodeIdx + 1) % hashRingSize;
+        BigInteger prevNodeID = nodeIDsList.get(prevNodeIdx);
         BigInteger nextNodeID = nodeIDsList.get(nextNodeIdx);
         logger.debug(String.format("prev/nextNodeIdx: %s, %s", prevNodeIdx, nextNodeIdx));
-        logger.debug(String.format("nextNodeID: %x", nextNodeID));
-        ECSNode nextNode = hashRing.get(nextNodeID);
-        BigInteger[] hashRange = new BigInteger[2];
-        hashRange[0] = currNodeID;
-
-        if (hashRingSize == 1) {
-            // Single node must handle entire hash range
-            hashRange[1] = nextNodeID;
-        } else {
-            // Only check next node's hash range if another node exists
-            BigInteger nextNodeHashRangeBegin = nextNode.getNodeHashRange()[0];
-            hashRange[1] = nextNodeHashRangeBegin;
-        }
-
-        logger.debug(String.format("hashRange: %x-%x", hashRange[0], hashRange[1]));
-
-        // Set ring position and hash range info
-        ECSNode currNode = hashRing.get(currNodeID);
-        BigInteger prevNodeID = nodeIDsList.get(prevNodeIdx);
-        logger.debug(String.format("currNode: %s", currNode));
         logger.debug(String.format("prevNodeID: %x", prevNodeID));
+        logger.debug(String.format("nextNodeID: %x", nextNodeID));
+        ECSNode currNode = hashRing.get(currNodeID);
         currNode.setPrevNodeID(prevNodeID);
         currNode.setNextNodeID(nextNodeID);
-        currNode.setNodeHashRange(hashRange);
+
+        // Calculate new even hash ranges
+        List<BigInteger> hashRangesEven = calculateEvenHashRanges(hashRingSize);
+
+        // Verify that number of new hash ranges is valid
+        if (hashRangesEven.size() != hashRingSize + 1) {
+            logger.fatal(String.format("Invalid number of hash ranges! Expected length of %d but got %d.",
+                    hashRingSize + 1, hashRangesEven.size()));
+        }
+
+        // Set new hash range for each node
+        for (int i = 0; i < hashRingSize; i++) {
+            BigInteger nodeID = nodeIDsList.get(i);
+            ECSNode node = hashRing.get(nodeID);
+            BigInteger newHashRangeStart = hashRangesEven.get(i);
+            BigInteger newHashRangeStop = hashRangesEven.get(i + 1);
+            BigInteger[] newHashRange = { newHashRangeStart, newHashRangeStop };
+            node.setNodeHashRange(newHashRange);
+        }
+
         DebugHelper.logFuncExit(logger);
+    }
+
+    /**
+     * Given an arbitrary number of nodes, calculate evenly spaced hash ranges for
+     * each one.
+     * 
+     * @param numNodes
+     * @return
+     */
+    public List<BigInteger> calculateEvenHashRanges(int numNodes) {
+        DebugHelper.logFuncEnter(logger);
+        List<BigInteger> equalRanges = new ArrayList<BigInteger>();
+
+        if (numNodes <= 0) {
+            return equalRanges;
+        }
+
+        int numLoops = numNodes + 1;
+        BigInteger numNodesBigInt = BigInteger.valueOf(numNodes);
+        BigInteger range = MAX_MD5.subtract(MIN_MD5);
+        BigInteger step = range.divide(numNodesBigInt);
+        logger.debug(String.format("Algorithm hash range: %x", range));
+        logger.debug(String.format("Step size: %x", step));
+
+        for (int i = 0; i < numLoops; i++) {
+            BigInteger hash = null;
+
+            if (i == numLoops - 1) {
+                // Account for uneven division when calculating last node's range
+                hash = MAX_MD5;
+            } else {
+                BigInteger iBigInt = BigInteger.valueOf(i);
+                hash = iBigInt.multiply(step);
+            }
+
+            equalRanges.add(hash);
+        }
+
+        // Debug logs
+        StringBuilder sb = new StringBuilder();
+        sb.append("[");
+
+        for (int i = 0; i < equalRanges.size(); i++) {
+            BigInteger hash = equalRanges.get(i);
+
+            if (i == equalRanges.size() - 1) {
+                // Make end of list look pretty :)
+                sb.append(String.format("%x]", hash));
+            } else {
+                sb.append(String.format("%x, ", hash));
+            }
+        }
+
+        logger.debug(String.format("Equal hash ranges: %s", sb.toString()));
+        DebugHelper.logFuncExit(logger);
+
+        return equalRanges;
     }
 
     /**
      * Create an `ECSNode` instance.
      * 
-     * @param info          Server info in an ip:port format
+     * @param info          Server info in an serverName:ip:port format
      * @param cacheStrategy Type of caching to use
      * @param cacheSize     Size of cache to use
      * @return
@@ -147,7 +207,7 @@ public class HashRing {
         DebugHelper.logFuncEnter(logger);
         BigInteger newNodeID = node.getNodeID();
         List<BigInteger> nodeIDsList = getSortedNodeIDs();
-        int hashRingSize = getHashRingSize();
+        int hashRingSize = hashRing.size();
         int newNodeIdx = -1;
         boolean added = false;
 
@@ -185,7 +245,7 @@ public class HashRing {
         }
 
         hashRing.put(newNodeID, node);
-        setNodeHashRange(newNodeIdx, nodeIDsList, hashRingSize + 1);
+        setNodeHashRangeEven(newNodeIdx, nodeIDsList, hashRingSize + 1);
 
         // Make previous and next nodes point to current node
         ECSNode prevNode = hashRing.get(node.getPrevNodeID());
@@ -226,7 +286,7 @@ public class HashRing {
     }
 
     /**
-     * Remove a node from the hash ring. Update hash range of next node.
+     * Remove a node from the hash ring. Update hash range of nodes.
      * 
      * @param node
      * @return Metadata that includes the node that was just removed. Removed node
@@ -239,24 +299,39 @@ public class HashRing {
         BigInteger prevNodeID = node.getPrevNodeID();
         ECSNode nextNode = hashRing.get(node.getNextNodeID());
         BigInteger nextNodeID = node.getNextNodeID();
-        logger.debug(String.format("nextNode: %s:%s:%s", nextNode.getNodeName(), nextNode.getNodeHost(),
-                nextNode.getNodePort()));
-        // Next server is now responsible for current node's hash range
-        BigInteger[] nextNodeHashRange = nextNode.getNodeHashRange();
-        logger.debug(String.format("nextNode old hash range: [%x, %x]", nextNodeHashRange[0], nextNodeHashRange[1]));
-        nextNodeHashRange[0] = node.getNodeHashRange()[0];
-        logger.debug(String.format("nextNode new hash range: [%x, %x]", nextNodeHashRange[0], nextNodeHashRange[1]));
 
         prevNode.setNextNodeID(nextNodeID);
         nextNode.setPrevNodeID(prevNodeID);
-        nextNode.setNodeHashRange(nextNodeHashRange);
+
+        // Get even hash ranges with server removed
+        int numRemainingNodes = hashRing.size() - 1;
+        List<BigInteger> hashRangesEven = calculateEvenHashRanges(numRemainingNodes);
+        // Re-distribute hash ranges only for nodes that will remain
+        List<BigInteger> nodeIDsList = getSortedNodeIDs();
+        BigInteger nodeID = node.getNodeID();
+        nodeIDsList.remove(nodeID);
+
+        for (int i = 0; i < numRemainingNodes; i++) {
+            BigInteger currID = nodeIDsList.get(i);
+            ECSNode currNode = hashRing.get(currID);
+            logger.debug(String.format("currNode old hash range: [%x, %x]", currNode.getNodeHashRange()[0],
+                    currNode.getNodeHashRange()[1]));
+            BigInteger newHashRangeStart = hashRangesEven.get(i);
+            BigInteger newHashRangeStop = hashRangesEven.get(i + 1);
+            BigInteger[] newHashRange = { newHashRangeStart, newHashRangeStop };
+            currNode.setNodeHashRange(newHashRange);
+            logger.debug(String.format("currNode new hash range: [%x, %x]", currNode.getNodeHashRange()[0],
+                    currNode.getNodeHashRange()[1]));
+        }
+
         // To notify current server to transfer all data
         BigInteger[] nodeNewHashRange = { BigInteger.valueOf(0), BigInteger.valueOf(0) };
         node.setNodeHashRange(nodeNewHashRange);
+
         // Grab metadata before removing node so it knows what to update
         HashMap<String, Metadata> allMetadataOld = getAllMetadata();
 
-        hashRing.remove(node.getNodeID());
+        hashRing.remove(nodeID);
         DebugHelper.logFuncExit(logger);
         return allMetadataOld;
     }
@@ -341,10 +416,6 @@ public class HashRing {
         DebugHelper.logFuncExit(logger);
 
         return allMetadata;
-    }
-
-    private int getHashRingSize() {
-        return hashRing.size();
     }
 
     public HashMap<BigInteger, ECSNode> getHashRing() {

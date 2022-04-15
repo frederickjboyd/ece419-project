@@ -316,6 +316,13 @@ public class ECSClient implements IECSClient {
     }
 
     @Override
+    /**
+     * Keep waiting a specified amount of time until a certain number of servers
+     * have been connected.
+     * 
+     * @param count   Number of servers to wait for
+     * @param timeout How often to check for connections
+     */
     public boolean awaitNodes(int count, int timeout) throws Exception {
         DebugHelper.logFuncEnter(logger);
         boolean result = false;
@@ -332,6 +339,11 @@ public class ECSClient implements IECSClient {
         return result;
     }
 
+    /**
+     * Halt execution for a specified amount of time.
+     * 
+     * @param timeout Time in milliseconds
+     */
     public void awaitTime(int timeout) {
         DebugHelper.logFuncEnter(logger);
         CountDownLatch latch = new CountDownLatch(timeout);
@@ -345,12 +357,19 @@ public class ECSClient implements IECSClient {
         DebugHelper.logFuncExit(logger);
     }
 
+    /**
+     * Create ZooKeeper watcher to monitor node crashes.
+     * 
+     * @param serverInfo Server to create watcher for in serverName:ip:port format
+     */
     private void handleNodeCrash(String serverInfo) {
         DebugHelper.logFuncEnter(logger);
         String zkNodePath = buildZkNodePath(serverInfo);
+        NodeStatus nodeStatus = serverStatusInfo.get(serverInfo);
 
         try {
-            if (running) {
+            // No need to create watcher if node is already offline/failed
+            if (running && nodeStatus != NodeStatus.OFFLINE && nodeStatus != NodeStatus.FAILED) {
                 zk.exists(zkNodePath, new ZooKeeperNodeDeletedWatcher(serverInfo));
             }
         } catch (Exception e) {
@@ -839,7 +858,7 @@ public class ECSClient implements IECSClient {
     /**
      * Extract just the server host and port from server info.
      * 
-     * @param serverInfo <serverName>:<ip>:<port>
+     * @param serverInfo serverName:ip:port
      * @return ip:port
      */
     private String getHostAndPort(String serverInfo) {

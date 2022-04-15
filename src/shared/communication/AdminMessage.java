@@ -21,8 +21,9 @@ public class AdminMessage {
         SHUTDOWN, // Terminate KVServer
         TRANSFER_DATA, // Request from a node to move its key-value pairs
         TRANSFER_DATA_COMPLETE, // All key-value pairs have been successfully received
-        REPLICATE_START,
-        REPLICATE_DATA
+        REPLICATE_START, // Ask coordinator to replicate keys to prev, next
+        REPLICATE_DATA, // Handle incoming replicas on prev, next servers
+        REPLICATE_COMPLETE // Coordinator receives confirmation that replicas are done copying
     }
 
     private static Logger logger = Logger.getRootLogger();

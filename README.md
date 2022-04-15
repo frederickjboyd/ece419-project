@@ -1,9 +1,10 @@
 # ece419-project
 ![example workflow](https://github.com/frederickjboyd/ece419-project/actions/workflows/ant.yml/badge.svg)
 
-UofT ECE419 Distributed Systems Project
+# UofT ECE419 Distributed Systems Project
+---
+## How to Run
 
-**How to Test Run**
 *Note that Milestone 4 changes are built on M3 files:*
 
 To start ECS: `java -jar m3-ecs.jar ecs.config`
@@ -23,7 +24,9 @@ If connecting from a remote machine: `connect <serverIP> <serverPort>`
 
 (You can use `hostname -i` to get the IP of the ECS machine)
 
-**Shutdown Procedure and File Cleanup**
+---
+
+## Shutdown Procedure and File Cleanup
 
 ECS: 
 `shutdown`

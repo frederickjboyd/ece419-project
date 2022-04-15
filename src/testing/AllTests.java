@@ -28,9 +28,12 @@ public class AllTests {
         // clientSuite.addTestSuite(AdditionalTest.class); // worked
         clientSuite.addTestSuite(HashRingTest.class); // worked
 
+        // Sequential consistency test
+        //clientSuite.addTestSuite(M4ConsistencyTest.class);
+
         // Special performance testing file
-        // clientSuite.addTestSuite(PerformanceTest.class); // ??
-        // clientSuite.addTestSuite(M3PerformanceTest.class);
+        // clientSuite.addTestSuite(M3PerformanceTest.class); // ??
+        // clientSuite.addTestSuite(M3PerformanceTest_multiclient.class);
         // clientSuite.addTestSuite(HashRingTest.class); // ??
         // clientSuite.addTestSuite(newConnectionTest.class); // worked
         // clientSuite.addTestSuite(M3ClientFailureHandling.class);

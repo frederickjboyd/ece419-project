@@ -112,6 +112,19 @@ public class KVCommunicationServer extends KVCommunicationClient implements Runn
         switch (msg.getStatus()) {
             case GET:
                 logger.trace("GET");
+                // M4 read lock during replication events
+                if (server.distributed() && server.getLockWrite()) {
+                    returnMsgType = StatusType.SERVER_WRITE_LOCK;
+                    logger.info("Server is locked for writing. Block GETs during replication.");
+
+                    try {
+                        returnMsg = new KVMessage(returnMsgType, msgKey, returnMsgValue);
+                    } catch (Exception e) {
+                        logger.error(e.getMessage());
+                    }
+
+                    return returnMsg;
+                }
 
                 if (server.distributed() && !hashReachable(msgKey)) {
                     returnMsgType = StatusType.SERVER_NOT_RESPONSIBLE;

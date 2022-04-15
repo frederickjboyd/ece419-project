@@ -20,7 +20,7 @@ public class M4ClientTest extends TestCase {
     private static final String ECSConfigPath = System.getProperty("user.dir") + "/ecs.config";
     private ECSClient ecs = null;
     // KVServer
-    private static final int numServers = 4;
+    private static final int numServers = 3;
     private static final String cacheStrategy = "FIFO";
     private static final int cacheSize = 50;
     private String testHost;
@@ -116,51 +116,33 @@ public class M4ClientTest extends TestCase {
         assertTrue(ex == null && (response.getStatus() == StatusType.GET_SUCCESS));
         System.out.println("SUCCESS: After get, the returned list remains accurate");
 
-        // testClientUpdateServerListAfterCrashing
-        // crash server
-        // server killable
-        killableProcess = new ArrayList<Integer>();
-        for (Integer pid : javaPIDs) {
-            if (!initJavaPIDs.contains(pid)) {
-                killableProcess.add(pid);
-            }
-        }
+        
+        // verify that the server list update are insync
+        serverInUse = kvClientList.get(0).getServerInUseList();
+        serverInUse2 = kvClientList.get(1).getServerInUseList();
+        assertTrue(numServers == serverInUse.size() && serverInUse.size()==serverInUse2.size());
+        System.out.println("SUCCESS: server lists are in sync across users");
 
-        StringBuilder killCmd = new StringBuilder();
-        killCmd.append("kill ");
-        killCmd.append(killableProcess.get(0));
-        System.out.println(killCmd);
+        // 
 
         try {
-            Process p = Runtime.getRuntime().exec(killCmd.toString());
-        } catch (Exception e) {
-            logger.error("Unable to kill a server Java programs");
-            e.printStackTrace();
-        }
-
-        try {
-            ecs.awaitNodes(numServers, 45000);
-        } catch (Exception e) {
-            System.out.println("Failed to await nodes!");
-        }
-
-        try {
-            response = kvClientList.get(0).put("124d", value);
-            response = kvClientList.get(0).put("sssssss", value);
-            response = kvClientList.get(3).put("3", value);
-            response = kvClientList.get(3).put("sdf", value);
+            response = kvClientList.get(2).get("3");
+            // response = kvClientList.get(0).put("sssssss", value);
+            // response = kvClientList.get(3).put("3", value);
+            // response = kvClientList.get(3).put("sdf", value);
 
         } catch (Exception e) {
             ex = e;
         }
-        System.out.println(response.getStatus());
-        // verify that the server list update are insync
+        
+        // To visualize that the client can still see the list after switching server
+        System.out.println("SUCCESS if visual appeared with "+String.valueOf(numServers)+" server appearing in the list");
         serverInUse = kvClientList.get(0).getServerInUseList();
         serverInUse2 = kvClientList.get(1).getServerInUseList();
+        System.out.println(serverInUse );
+        System.out.println(serverInUse2 );
 
-        assertTrue(numServers == serverInUse.size() && serverInUse.size()==serverInUse2.size());
-        System.out.println("SUCCESS: server lists are in sync across users");
-
+        
 
 
         // assertTrue(serverInUse == serverInUse2);
@@ -170,6 +152,34 @@ public class M4ClientTest extends TestCase {
         // System.out.println("initial put success");
         // int initPort1 = kvClientList.get(0).getCurrentPort();
         // int initPort2 = kvClientList.get(1).getCurrentPort();
+
+        // testClientUpdateServerListAfterCrashing
+        // // crash server
+        // // server killable
+        // killableProcess = new ArrayList<Integer>();
+        // for (Integer pid : javaPIDs) {
+        //     if (!initJavaPIDs.contains(pid)) {
+        //         killableProcess.add(pid);
+        //     }
+        // }
+
+        // StringBuilder killCmd = new StringBuilder();
+        // killCmd.append("kill ");
+        // killCmd.append(killableProcess.get(2));
+        // System.out.println(killCmd);
+
+        // try {
+        //     Process p = Runtime.getRuntime().exec(killCmd.toString());
+        // } catch (Exception e) {
+        //     logger.error("Unable to kill a server Java programs");
+        //     e.printStackTrace();
+        // }
+
+        // try {
+        //     ecs.awaitNodes(numServers, 45000);
+        // } catch (Exception e) {
+        //     System.out.println("Failed to await nodes!");
+        // }
 
         // System.out.println("Initial");
 

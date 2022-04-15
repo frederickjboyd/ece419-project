@@ -532,15 +532,32 @@ public class KVServer implements IKVServer, Runnable {
                 logger.error("Tried to delete non-existent key: " + key);
                 throw new Exception("Tried to delete non-existent key!");
             }
+        }
 
-        } else if (!storage.put(key, value)) {
-            logger.error("Failed to PUT (" + key + ',' + value + ") into map!");
-            throw new Exception("Failed to put KV pair in storage!");
+        // M4 modified
+        else{
+            boolean putResult = storage.put(key, value);
+            if (!putResult){
+                logger.error("Failed to PUT (" + key + ',' + value + ") into map!");
+                throw new Exception("Failed to put KV pair in storage!");
+            }
+            // if put successful, also write to cache
+            else{
+                // Write to cache
+                if (cache.cacheActiveStatus()) {
+                    cache.putCache(key, value);
+                }
+            }
         }
-        // Write to cache
-        if (cache.cacheActiveStatus()) {
-            cache.putCache(key, value);
-        }
+
+        // } else if (!storage.put(key, value)) {
+        //     logger.error("Failed to PUT (" + key + ',' + value + ") into map!");
+        //     throw new Exception("Failed to put KV pair in storage!");
+        // }
+        // // Write to cache
+        // if (cache.cacheActiveStatus()) {
+        //     cache.putCache(key, value);
+        // }
     }
 
     @Override

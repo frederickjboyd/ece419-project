@@ -22,15 +22,15 @@ public class AllTests {
 
     public static Test suite() {
         TestSuite clientSuite = new TestSuite("Basic Storage ServerTest-Suite");
-        // clientSuite.addTestSuite(ConnectionTest.class); // worked
+        clientSuite.addTestSuite(ConnectionTest.class); // worked
         // clientSuite.addTestSuite(InteractionTest.class); // worked
-        // clientSuite.addTestSuite(MessageTest.class); // worked
+        clientSuite.addTestSuite(MessageTest.class); // worked
         // clientSuite.addTestSuite(AdditionalTest.class); // worked
-        // clientSuite.addTestSuite(HashRingTest.class); // worked
-        // clientSuite.addTestSuite(HashRingEvenTest.class);
+        clientSuite.addTestSuite(HashRingTest.class); // worked
+        clientSuite.addTestSuite(HashRingEvenTest.class);
 
         // Sequential consistency test
-        //clientSuite.addTestSuite(M4ConsistencyTest.class);
+        // clientSuite.addTestSuite(M4ConsistencyTest.class);
 
         // Special performance testing file
         // clientSuite.addTestSuite(M3PerformanceTest.class); // ??
@@ -38,7 +38,7 @@ public class AllTests {
         // clientSuite.addTestSuite(HashRingTest.class); // ??
         // clientSuite.addTestSuite(newConnectionTest.class); // worked
         // clientSuite.addTestSuite(M3ClientFailureHandling.class);
-        clientSuite.addTestSuite(M4ClientTest.class); 
+        // clientSuite.addTestSuite(M4ClientTest.class);
 
         return clientSuite;
     }
